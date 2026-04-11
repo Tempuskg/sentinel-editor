@@ -14,11 +14,6 @@ enum class Constants(val DATABASE_VERSION: Int) {
 /**
  * Database converters
  */
-class Converters
-
-/**
- * Database migrations
- */
 object Migrations {
     val MIGRATION_1_2 = Migration(1, 2) {
         // Future migrations will be added here

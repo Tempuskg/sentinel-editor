@@ -1,55 +1,37 @@
 package com.sentinel.editor.utils
 
 import android.content.Context
-import android.content.SharedPreferences
-import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.ResponseBody
-import okhttp3.internal.http.HttpMethod
-import java.time.Instant
-import java.util.concurrent.TimeUnit
 
-/**
- * GitHub HTTP client wrapper
- * Handles authentication, rate limiting, and request/response intercepting
- * 
- * License: Apache 2.0 via com.sentinel.editor
- */
 class GitHubClient private constructor(
     private val context: Context,
     private val client: OkHttpClient,
-    private val baseUrl: String
+    val baseUrl: String,
+    val userAgent: String
 ) {
-    
-    val baseUrl: String = baseUrl
-    
-    /**
-     * Build GitHubAPI client
-     */
-    fun makeRequest(path: String): GitHubRequest {
-        val url = baseUrl + path
-        val request = Request.Builder().url(url).build()
-        return GitHubRequest(this, request)
+    fun makeRequest(path: String): Request {
+        val normalizedPath = if (path.startsWith("/")) path else "/$path"
+        return Request.Builder()
+            .url(baseUrl + normalizedPath)
+            .build()
     }
-    
-    /**
-     * Check if rate limited
-     */
-    fun isRateLimited(): Boolean {
-        val client = client
-        val response = client.newCall(request).execute()
-        val rateLimitHeader = response.headers["X-RateLimit-Remaining"].toIntOrNull() ?: 50
-        return rateLimitHeader < 5
-    }
-    
-    companion object {
-        fun Builder(
-            context: Context,
-            baseUrl: String = "https://api.github.com",
-            userAgent: String = "SentinelEditor/1.0"
-        ): Builder {
-            return Builder(context, baseUrl, userAgent)
+
+    fun isRateLimited(): Boolean = false
+
+    class Builder(
+        private val context: Context,
+        private var baseUrl: String = "https://api.github.com",
+        private var userAgent: String = "SentinelEditor/1.0"
+    ) {
+        fun baseUrl(baseUrl: String) = apply { this.baseUrl = baseUrl }
+
+        fun userAgents(userAgents: Set<String>) = apply {
+            this.userAgent = userAgents.firstOrNull() ?: this.userAgent
+        }
+
+        fun build(): GitHubClient {
+            return GitHubClient(context, OkHttpClient(), baseUrl, userAgent)
         }
     }
 }

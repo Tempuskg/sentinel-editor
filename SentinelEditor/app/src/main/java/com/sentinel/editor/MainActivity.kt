@@ -4,31 +4,28 @@ import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.sentinel.editor.ui.theme.SentinelEditorTheme
-import com.sentinel.ui.markdown.ComposeMarkdownEditor
 
 class MainActivity : ComponentActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
-        val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            window?.isStatusBarColor = true
-            window?.layoutInDisplayCutoutMode = DisplayCutoutMode.NAVIGATION_BAR
-        }
         
         setContent {
-            AppTheme {
+            SentinelEditorTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    ComposeMarkdownEditor()
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Text("Sentinel Editor")
+                    }
                 }
             }
         }

@@ -10,7 +10,8 @@ object Constants {
     // ==================== GitHub API ====================
     const val GITHUB_BASE_URL = "https://api.github.com"
     const val GITHUB_API_VERSION = "2022-11-28"
-    const val GITHUB_USER_AGENT = "SentinelEditor/${BuildConfig.VERSION_NAME} (GitHub Android API v${GITHUB_API_VERSION})"
+    val GITHUB_USER_AGENT: String
+        get() = "SentinelEditor/1.0 (GitHub Android API v$GITHUB_API_VERSION)"
     
     const val GITHUB_AUTH_HEADER = "Authorization"
     const val GITHUB_AUTH_FORMAT = "Bearer %s" // %s = token

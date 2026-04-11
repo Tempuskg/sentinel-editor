@@ -40,23 +40,29 @@ android {
     buildFeatures {
         compose = true
     }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = project.findProperty("composeCompilerVersion")?.toString() ?: "1.5.14"
+    }
 }
 
 dependencies {
     implementation(project(":core:network"))
     
+    // Compose BOM
+    val composeBomVersion = project.findProperty("composeBomVersion")?.toString() ?: "2024.12.01"
+    implementation(platform("androidx.compose:compose-bom:$composeBomVersion"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.runtime:runtime")
+    implementation("androidx.activity:activity-compose:1.9.3")
+
     // Markwon (Markdown rendering)
-    val markwonVersion = project.findProperty("markwonVersion")?.toString() ?: "4.6.6"
+    val markwonVersion = project.findProperty("markwonVersion")?.toString() ?: "4.6.2"
     implementation("io.noties.markwon:core:$markwonVersion")
-    implementation("io.noties.markwon:ext-autolink:$markwonVersion")
-    implementation("io.noties.markwon:ext-gfm:$markwonVersion")
     implementation("io.noties.markwon:html:$markwonVersion")
-    implementation("io.noties.markwon:image-glide:$markwonVersion")
-    implementation("io.noties.markwon:ext-spoiler:$markwonVersion")
-    implementation("io.noties.markwon:ext-smartypants:$markwonVersion")
-    implementation("io.noties.markwon:ext-strikethrough:$markwonVersion")
-    implementation("io.noties.markwon:ext-superscript:$markwonVersion")
-    implementation("io.noties.markwon:ext-subscript:$markwonVersion")
+    implementation("io.noties.markwon:linkify:$markwonVersion")
     
     // Coil
     val coilVersion = project.findProperty("coilVersion")?.toString() ?: "2.7.0"

@@ -17,11 +17,7 @@ class Converters {
     
     @TypeConverter
     fun fromLocalDateTime(dateTime: LocalDateTime?): Long? {
-        return dateTime?.let {
-            java.time.Instant.ofEpochMilli(
-                java.time.ZoneId.systemDefault().toInstant(it.toEpochSecond())
-            ).toEpochMilli()
-        }
+        return dateTime?.atZone(java.time.ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
     }
     
     @TypeConverter

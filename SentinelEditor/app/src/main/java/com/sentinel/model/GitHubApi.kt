@@ -53,7 +53,7 @@ interface GitHubApi {
         @Path("pull_number") pullNumber: Int
     ): Response<PullRequest>
     
-    @Get("repos/{owner}/{repo}/pulls")
+    @GET("repos/{owner}/{repo}/pulls")
     suspend fun getPullRequests(
         @Path("owner") owner: String,
         @Path("repo") repo: String
