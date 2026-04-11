@@ -1,7 +1,6 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
 
@@ -81,7 +80,6 @@ dependencies {
     // Room
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
-    implementation("androidx.room:room-ksp:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
     androidTestImplementation("androidx.room:room-testing:2.6.1")
     
@@ -104,7 +102,6 @@ dependencies {
     val okhttpVersion = "4.12.0"
     implementation("com.squareup.okhttp3:okhttp:$okhttpVersion")
     implementation("com.squareup.okhttp3:logging-interceptor:$okhttpVersion")
-    implementation("com.squareup.okhttp3:connectivity:4.12.0")
     
     // Retrofit (Apache-2.0) - REST client
     val retrofitVersion = "2.11.0"
@@ -115,13 +112,8 @@ dependencies {
     // OKHttp + Retrofit adapter
     implementation("com.squareup.okhttp3:okhttp-urlconnection:$okhttpVersion")
     
-    // Kotlin GitHub API (Apache-2.0) - GitHub-specific API client
+    // Kotlin GitHub API placeholder version (currently unused)
     val githubApiVersion = "1.318"
-    implementation("com.kohlschutter.junixsocket:junixsocket-core:2.7.0")
-    implementation("com.kohlschutter.junixsocket:junixsocket-unixdomain:2.7.0")
-    
-    // GitHub Kotlin SDK (Apache-2.0)
-    implementation("io.github.ajalt:klutch:0.22") // Note: this is optional, will implement manual API
     
     // =========== NETWORKING & PROTOCOLS ===========
     
@@ -134,18 +126,10 @@ dependencies {
     // =========== MARKDOWN PROCESSING ===========
     
     // Markor markdown renderer (Apache-2.0)
-    implementation("io.noties.markwon:markwon:4.6.2")
-    implementation("io.noties.markwon:gradle:4.6.2")
+    implementation("io.noties.markwon:core:4.6.2")
     implementation("io.noties.markwon:linkify:4.6.2")
     implementation("io.noties.markwon:html:4.6.2")
-    implementation("io.noties.markwon:jerkson:4.6.2") // JSON for markwon
     
-    // CommonMark (Apache-2.0) - Alternative parser
-    implementation("org.commonmark:commonmark:0.21.0")
-    
-    // PagedText for lazy rendering large markdown files
-    implementation("com.github.juan-nino:PagedText:2.2")
-
     // =========== UI & MATERIAL ===========
     
     // Material Design 3 (Apache-2.0)

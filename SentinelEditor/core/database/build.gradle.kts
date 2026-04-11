@@ -5,7 +5,6 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
 
@@ -41,9 +40,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":app"))
     // AndroidX Room
-    val roomVersion = "${project.property("roomVersion").or("2.6.1")}"
+    val roomVersion = project.findProperty("roomVersion")?.toString() ?: "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")

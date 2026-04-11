@@ -60,7 +60,6 @@
     <!-- Editor Toolbar -->
     <string name="toolbar_title">Editor</string>
     <string name="new_file">New File</string>
-    <string name="open_file">Open...</string>
     <string name="rename">Rename</string>
     <string name="delete">Delete</string>
     <string name="undo">Undo</string>

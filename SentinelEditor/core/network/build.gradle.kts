@@ -5,7 +5,6 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
 
@@ -38,27 +37,20 @@ android {
         jvmTarget = "17"
     }
     
-    // API generation
-    buildFeatures {
-        kapt = true
-    }
 }
 
 dependencies {
-    implementation(project(":app"))
-    
     // OkHttp
-    val okhttpVersion = "${project.property("okhttpVersion").or("4.12.0")}"
+    val okhttpVersion = project.findProperty("okhttpVersion")?.toString() ?: "4.12.0"
     implementation("com.squareup.okhttp3:okhttp:$okhttpVersion")
     implementation("com.squareup.okhttp3:logging-interceptor:$okhttpVersion")
-    implementation("com.squareup.okhttp3:connectivity:$okhttpVersion")
     
     // Retrofit
-    val retrofitVersion = "${project.property("retrofitVersion").or("2.11.0")}"
+    val retrofitVersion = project.findProperty("retrofitVersion")?.toString() ?: "2.11.0"
     implementation("com.squareup.retrofit2:retrofit:$retrofitVersion")
     implementation("com.squareup.retrofit2:converter-gson:$retrofitVersion")
     implementation("com.squareup.retrofit2:adapter-rxjava2:$retrofitVersion")
     
     // Gson
-    impl("com.google.code.gson:gson:2.11.0")
+    implementation("com.google.code.gson:gson:2.11.0")
 }
