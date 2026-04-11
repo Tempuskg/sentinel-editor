@@ -3,114 +3,62 @@ package com.sentinel.model
 import com.google.gson.annotations.SerializedName
 
 /**
- * GitHub API response for commit details
- * 
- * Licensed under Apache 2.0 via com.sentinel.editor
+ * GitHub API response for commit details.
  */
 data class GitCommit(
     val sha: String,
     @SerializedName("node_id")
-    val nodeId: String?,
+    val nodeId: String? = null,
     @SerializedName("html_url")
-    val htmlUrl: String,
+    val htmlUrl: String? = null,
     @SerializedName("comments_url")
-    val commentsUrl: String,
-    @SerializedName("commit")
-    val commit: GitCommitCommit? = null,
-    @SerializedName("author")
+    val commentsUrl: String? = null,
+    val commit: GitCommitDetails? = null,
     val author: GitCommitUser? = null,
-    @SerializedName("committer")
     val committer: GitCommitUser? = null,
-    val parents: List<GitCommitParent>
-) {
-    data class GitCommitCommit(
-        val author: GitCommitUser?,
-        @SerializedName("url")
-        val url: String,
-        @SerializedName("timestamp")
-        val timestamp: String,
-        val message: String,
-        val distinct: Boolean,
-        @SerializedName("tree")
-        val tree: GitCommitTree?,
-        @SerializedName("parents")
-        val parents: List<GitCommitParent>
-    ) {
-        data class GitCommitParent(
-            val sha: String,
-            @SerializedName("url")
-            val url: String
-        )
-        
-        data class GitCommitTree(
-            @SerializedName("url")
-            val url: String,
-            @SerializedName("sha")
-            val sha: String
-        )
-    }
-    
-    data class GitCommitUser(
-        val name: String,
-        @SerializedName("email")
-        val email: String,
-        @SerializedName("date")
-        val date: String,
-        val username: String,
-        @SerializedName("repository")
-        val repository: GitCommitUserRepository? = null,
-        @SerializedName("user")
-        val user: GithubUser? = null
-    ) {
-        data class GitCommitUserRepository(
-            val name: String,
-            @SerializedName("full_name")
-            val fullName: String,
-            val url: String,
-            @SerializedName("owner")
-            val owner: GitCommitUserOwner,
-            @SerializedName("private")
-            val private: Boolean,
-            val created_at: String,
-            @SerializedName("updated_at")
-            val updatedAt: String,
-            @SerializedName("http_url")
-            val httpUrl: String,
-            @SerializedName("ssh_url")
-            val sshUrl: String,
-            @SerializedName("clone_url")
-            val cloneUrl: String,
-            val htmlUrl: String,
-            @SerializedName("description")
-            val description: String?
-        ) {
-            data class GitCommitUserOwner(
-                val login: String,
-                @SerializedName("id")
-                val id: Long,
-                @SerializedName("avatar_url")
-                val avatarUrl: String,
-                @SerializedName("url")
-                val url: String,
-                @SerializedName("html_url")
-                val htmlUrl: String,
-                @SerializedName("type")
-                val type: String
-            )
-        }
-        
-        data class GithubUser(
-            val login: String,
-            @SerializedName("id")
-            val id: Long,
-            @SerializedName("avatar_url")
-            val avatarUrl: String,
-            @SerializedName("url")
-            val url: String,
-            @SerializedName("html_url")
-            val htmlUrl: String,
-            @SerializedName("type")
-            val type: String
-        )
-    }
-}
+    val parents: List<GitCommitParent> = emptyList(),
+    val message: String? = null,
+    val timestamp: String? = null,
+    val url: String? = null
+)
+
+data class GitCommitDetails(
+    val author: GitCommitIdentity? = null,
+    val committer: GitCommitIdentity? = null,
+    val message: String? = null,
+    val tree: GitCommitTree? = null,
+    val url: String? = null
+)
+
+data class GitCommitIdentity(
+    val name: String? = null,
+    val email: String? = null,
+    val date: String? = null
+)
+
+data class GitCommitParent(
+    val sha: String,
+    @SerializedName("url")
+    val url: String
+)
+
+data class GitCommitTree(
+    @SerializedName("sha")
+    val sha: String,
+    @SerializedName("url")
+    val url: String
+)
+
+data class GitCommitUser(
+    val login: String? = null,
+    @SerializedName("id")
+    val id: Long? = null,
+    @SerializedName("avatar_url")
+    val avatarUrl: String? = null,
+    @SerializedName("url")
+    val url: String? = null,
+    @SerializedName("html_url")
+    val htmlUrl: String? = null,
+    @SerializedName("type")
+    val type: String? = null
+)

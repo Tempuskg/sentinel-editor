@@ -1,10 +1,7 @@
 package com.sentinel.database
 
 import android.content.Context
-import androidx.room.Room
 import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
-import com.sentinel.model.GitHubAuth
 
 /**
  * Room database version constants
@@ -37,33 +34,14 @@ object DatabaseInitializer {
     /**
      * Get database instance
      */
-    fun getInstance(context: Context): Database {
-        val instance = Room.databaseBuilder(
-            context.applicationContext,
-            Database::class.java,
-            "sentinel_database"
-        )
-            .addMigrations(Migration.MIGRATION_1_2)
-            .fallbackToDestructiveMigration()
-            .build()
-        return instance
+    fun getInstance(context: Context): SentinelDatabase {
+        return SentinelDatabase.getInstance(context)
     }
     
     /**
      * Initialize database with default data if needed
      */
     fun initialize(context: Context) {
-        val database = getInstance(context)
+        getInstance(context)
     }
-}
-
-/**
- * Main Database class
- */
-abstract class Database @androidx.room.Database(
-    entities = [GitHubAuth::class],
-    exportSchema = false
-) : androidx.room.RoomDatabase() {
-    
-    abstract fun authDao(): AuthDao
 }

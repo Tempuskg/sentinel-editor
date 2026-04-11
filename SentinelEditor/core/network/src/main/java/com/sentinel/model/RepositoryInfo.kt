@@ -118,10 +118,4 @@ data class RepositoryInfo(
     val watchers: RepositoryInfo? = null,
     @SerializedName("watchers_count")
     val watchersCount: Int
-) {
-    @get:SerializedName("updated_at")
-    fun getUpdatedDate(): String? = updatedAt
-
-    @get:SerializedName("created_at")
-    fun getCreatedAt(): String? = createdAt
-}
+)

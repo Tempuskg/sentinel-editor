@@ -47,10 +47,16 @@ dependencies {
     
     // Markwon (Markdown rendering)
     val markwonVersion = project.findProperty("markwonVersion")?.toString() ?: "4.6.6"
-    implementation("io.noties.markwon:markwon:$markwonVersion")
-    implementation("io.noties.markwon:linkify:$markwonVersion")
+    implementation("io.noties.markwon:core:$markwonVersion")
+    implementation("io.noties.markwon:ext-autolink:$markwonVersion")
+    implementation("io.noties.markwon:ext-gfm:$markwonVersion")
     implementation("io.noties.markwon:html:$markwonVersion")
-    implementation("io.noties.markwon:jerkson:$markwonVersion")
+    implementation("io.noties.markwon:image-glide:$markwonVersion")
+    implementation("io.noties.markwon:ext-spoiler:$markwonVersion")
+    implementation("io.noties.markwon:ext-smartypants:$markwonVersion")
+    implementation("io.noties.markwon:ext-strikethrough:$markwonVersion")
+    implementation("io.noties.markwon:ext-superscript:$markwonVersion")
+    implementation("io.noties.markwon:ext-subscript:$markwonVersion")
     
     // Coil
     val coilVersion = project.findProperty("coilVersion")?.toString() ?: "2.7.0"

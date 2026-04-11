@@ -1,5 +1,9 @@
 package com.sentinel.model
 
+import androidx.room.Entity
+import androidx.room.ColumnInfo
+import androidx.room.PrimaryKey
+
 /**
  * Markdown file content with editor state
  * 
@@ -11,14 +15,20 @@ package com.sentinel.model
  * 
  * Licensed under Apache 2.0 via com.sentinel.editor
  */
+@Entity(tableName = "files")
 data class MarkdownFile(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    @ColumnInfo(name = "repo_id")
     val repoId: Long,
+    @ColumnInfo(name = "relative_path")
     val relativePath: String,
     val content: String,
+    @ColumnInfo(name = "cursor_position")
     val cursorPosition: Int = 0,
+    @ColumnInfo(name = "scroll_offset")
     val scrollOffset: Int = 0,
+    @ColumnInfo(name = "is_dirty")
     val isDirty: Boolean = false,
     val modified: Long = System.currentTimeMillis()
 ) {

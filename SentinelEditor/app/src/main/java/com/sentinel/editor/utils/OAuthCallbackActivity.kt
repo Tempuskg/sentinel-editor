@@ -269,13 +269,9 @@ class OAuthCallbackActivity : ComponentActivity() {
                 Button(
                     onClick = {
                         // Navigate to main app
-                        val mainIntent = Intent(
-                            context = LocalContext.current,
-                            targetActivity = MainActivity::class.java
-                        )
+                        val mainIntent = Intent(this@OAuthCallbackActivity, MainActivity::class.java)
                         mainIntent.addFlags(
-                            Intent.FLAG_ACTIVITY_NEW_TASK
-                            |Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         )
                         startActivity(mainIntent)
                         finish()

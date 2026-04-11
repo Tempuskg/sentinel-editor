@@ -1,15 +1,16 @@
 package com.sentinel.database
 
+import android.content.Context
 import androidx.room.Database
+import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
 import com.sentinel.model.GitHubAuth
 
 @Database(
-    version = Constants.DATABASE_VERSION,
+    entities = [GitHubAuth::class],
+    version = 1,
     exportSchema = false
 )
-@TypeConverters(Converters::class)
 abstract class SentinelDatabase : RoomDatabase() {
     
     abstract fun authDao(): AuthDao
@@ -23,7 +24,11 @@ abstract class SentinelDatabase : RoomDatabase() {
         
         fun getInstance(context: Context): SentinelDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = SentinelDatabase.Builder(context)
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    SentinelDatabase::class.java,
+                    "sentinel_database"
+                )
                     .build()
                 INSTANCE = instance
                 instance

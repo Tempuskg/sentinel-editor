@@ -1,7 +1,6 @@
 package com.sentinel.editor.ui
 
 import androidx.compose.foundation.*
-import androidx.compose.foundation.bounce
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,9 +12,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sentinel.model.*
@@ -51,7 +50,7 @@ fun FileExplorerScreen(
     ) {
         items(
             items = fileTree,
-            key = { _, it.path -> it.path }
+            key = { it.path }
         ) { item ->
             FileTreeItem(
                 item = item,
@@ -72,9 +71,11 @@ fun FileTreeItem(
     onSelected: ((String) -> Unit)? = null,
     onDirectorySelected: ((String) -> Unit)? = null
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     // Determine if this is a folder or file
     val isFolder = item.type == "dir"
-    val icon: ImageVector = if (isFolder) Icons.Default.Folder else Icons.Default.Document
+    val icon: ImageVector = if (isFolder) Icons.Default.Folder else Icons.Default.Description
+    val extension = item.name.substringAfterLast('.', "")
     
     // Click action
     val onClick: () -> Unit = if (onSelected != null) {
@@ -122,9 +123,9 @@ fun FileTreeItem(
             Spacer(modifier = Modifier.weight(1f))
             
             // Extension if file
-            if (!isFolder && item.extension.isNotBlank()) {
+            if (!isFolder && extension.isNotBlank()) {
                 Text(
-                    text = ".$item.extension",
+                    text = ".$extension",
                     fontSize = 10.sp,
                     color = colorScheme.onSurfaceVariant
                 )
