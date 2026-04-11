@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App name and labels -->
+    <string name="app_name">Sentinel Editor</string>
+    <string name="repo_selector">GitHub Repository Picker</string>
+    <string name="file_selector">Markdown File Picker</string>
+    
+    <!-- Editor -->
+    <string name="editor">Editor</string>
+    <string name="preview">Preview</string>
+    <string name="edit_button_code">Edit (Code)</string>
+    <string name="preview_button_switch">Preview</string>
+    <string name="save_button">Save</string>
+    <string name="cancel_button">Cancel</string>
+    <string name="discard_changes">Discard Changes</string>
+    <string name="unsaved_changes_warning">You have unsaved changes. Discard?</string>
+    
+    <!-- Navigation -->
+    <string name="nav_repositories">Repositories</string>
+    <string name="nav_files">Files</string>
+    <string name="nav_pull_requests">Pull Requests</string>
+    <string name="nav_settings">Settings</string>
+    
+    <!-- Repository list -->
+    <string name="select_repository">Select a Repository</string>
+    <string name="no_repositories">No repositories found</string>
+    <string name="search_repos">Search repositories...</string>
+    
+    <!-- File explorer -->
+    <string name="file_explorer">Files</string>
+    <string name="open_file">Open File</string>
+    <string name="delete_file">Delete File</string>
+    <string name="unsynced">Unsynced</string>
+    <string name="sync_now">Sync Now</string>
+    <string name="create_file">Create File</string>
+    <string name="create_folder">Create Folder</string>
+    
+    <!-- Pull Requests -->
+    <string name="pull_requests">Pull Requests</string>
+    <string name="view_pull_request">View #%d</string>
+    <string name="request_review">Request Review</string>
+    <string name="merge_pull_request">Merge PR #%d</string>
+    
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="account_settings">Account</string>
+    <string name="theme_settings">Theme</string>
+    <string name="cache_settings">Cache</string>
+    <string name="about">About</string>
+    
+    <!-- Tokens/Authentication -->
+    <string name="token">Token</string>
+    <string name="token_placeholder">Paste your GitHub Personal Access Token</string>
+    <string name="token_hint">Token for GitHub API access</string>
+    <string name="clear_token">Clear Token</string>
+    <string name="save_token">Save Token</string>
+    <string name="token_cleared">Token cleared</string>
+    <string name="token_saved">Token saved</string>
+    
+    <!-- Editor Toolbar -->
+    <string name="toolbar_title">Editor</string>
+    <string name="new_file">New File</string>
+    <string name="open_file">Open...</string>
+    <string name="rename">Rename</string>
+    <string name="delete">Delete</string>
+    <string name="undo">Undo</string>
+    <string name="redo">Redo</string>
+    <string name="bold">Bold</string>
+    <string name="italic">Italic</string>
+    <string name="underline">Underline</string>
+    <string name="heading">Heading</string>
+    <string name="code_block">Code Block</string>
+    <string name="table">Table</string>
+    <string name="checklist">Checklist</string>
+    
+    <!-- Messages -->
+    <string name="loading">Loading...</string>
+    <string name="error">Error</string>
+    <string name="network_error">Network error. Check your connection.</string>
+    <string name="file_deleted">File deleted from repository</string>
+    <string name="commit_success">Commits successfully to GitHub</string>
+    <string name="commit_failed">Failed to commit changes</string>
+    
+    <!-- Sync -->
+    <string name="syncing">Syncing...</string>
+    <string name="sync_complete">Sync completed</string>
+    <string name="offline_mode">Offline Mode</string>
+    
+    <!-- Pull Request -->
+    <string name="pr_list_title">Pull Requests</string>
+    <string name="open_prs">open</string>
+    <string name="closed_prs">closed</string>
+    <string name="all_prs">all</string>
+    <string name="all">all</string>
+</resources>

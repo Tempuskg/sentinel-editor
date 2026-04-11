@@ -1,0 +1,40 @@
+# SentinelEditor - Gradle Ignore
+# Dependencies, build files, gitignore for Gradle
+
+# External dependencies
+*.jar
+*.aar
+
+# Build outputs
+/build
+.gradle
+.gradle-cache/
+/app/build/
+/.gradle/
+*/build/
+*/intermediates/
+*/outputs/
+*/cache/
+*/cursors/
+*.iml
+local.properties
+
+# IDE files
+.idea/
+*.ipr
+*.iml
+.project
+.classpath
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Local config
+local.properties
+gradlew*
+gradle-wrapper.jar
+gradle-wrapper.properties
+
+# Logs
+*.log

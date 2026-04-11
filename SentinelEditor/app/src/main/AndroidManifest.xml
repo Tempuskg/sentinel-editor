@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+SentinelEditor AndroidManifest
+GitHub WYSIWYG Markdown Editor
+Licensed under Apache 2.0 via com.sentinel.editor
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--========== Network Access ==========-->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    
+    <!--========== Storage (optional - for file system access) ==========-->
+    <!-- Use below only if app needs to read/write files from storage -->
+    <!--
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    -->
+    
+    <!--========== Background Data Sync ==========-->
+    <!-- Uncomment if using WorkManager for background GitHub data fetch -->
+    <!--
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    -->
+    
+    <!--========== Version info ==========-->
+    <application
+        android:name=".SentinelApplication"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.SentinelEditor"
+        android:enableOnBackInvokedCallback="true"
+        tools:targetApi="35">
+
+        <!--========== Main Activity ==========-->
+        <activity
+            android:name=".editor.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.SentinelEditor"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!--========== GitHub Intent Filters ==========-->
+            <intent-filter android:label="@string/repo_selector">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" android:host="github.com/*" />
+                <data android:scheme="https" android:host="github.com/*" />
+            </intent-filter>
+
+            <!-- Deep link for repo URLs -->
+            <intent-filter android:label="@string/repo_selector">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="github.com" />
+            </intent-filter>
+
+            <!-- Deep link for markdown files -->
+            <intent-filter android:label="@string/file_selector">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+            </intent-filter>
+        </activity>
+
+        <!--========== Meta Data ==========-->
+        <meta-data
+            android:name="com.github.android"
+            android:value="true" />
+            
+        <meta-data
+            android:name="com.drewhamilton.pochinki.android.intents.browser"
+            android:value="true" />
+            
+        <!--========== GitHub HTTP Cache ==========-->
+        <meta-data
+            android:name="github_api_cache_ttl_seconds"
+            android:value="600" /> <!-- 10 minutes -->
+            
+        <meta-data
+            android:name="github_api_cache_max_size"
+            android:value="500MB" />
+            
+        <meta-data
+            android:name="github_rate_limit_threshold"
+            android:value="50" />
+            
+        <meta-data
+            android:name="github_rate_limit_window"
+            android:value="1200000" /> <!-- 20 minutes -->
+
+        <!--========== Notification Channels ==========-->
+        <!-- Background sync notifications -->
+        <service
+            android:name=".service.GitHubSyncService"
+            android:exported="false"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="com.github.sync" />
+            </intent-filter>
+        </service>
+
+    </application>
+
+</manifest>

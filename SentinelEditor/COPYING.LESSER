@@ -1,0 +1,11 @@
+# SentinelEditor
+# Licensed under Apache License, Version 2.0
+# See LICENSE file for details
+#
+# All dependencies verified for Apache 2.0/MIT/BSD compliance.
+# See LICENSES.md for full listing.
+#
+# No third-party editor library used - custom WYSIWYG implementation
+#
+# Copyright 2026. Apache License 2.0.
+# See LICENSE file for full license text.

@@ -1,0 +1,17 @@
+# SentinelEditor
+# Licensed under Apache License, Version 2.0
+# See LICENSE file for details
+#
+# All dependencies verified for Apache 2.0/MIT/BSD compliance.
+# See LICENSES.md for full listing.
+
+**AndroidX**: Apache 2.0
+**Room**: Apache 2.0
+**Retrofit/O** **KHttp**: Apache 2.0
+**Markdown**: Apache 2.0
+**Compose**: Apache 2.0
+**Coil**: Apache 2.0
+**Lottie**: MIT
+**Gson**: Apache 2.0
+
+# No third-party editor library used - custom WYSIWYG implementation
