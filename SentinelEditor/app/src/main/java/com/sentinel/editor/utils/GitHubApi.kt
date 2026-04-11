@@ -145,19 +145,13 @@ class GitHubApi private constructor(
             }
 
             val client = OkHttpClient.Builder()
-                .addInterceptor(jsInterceptors(loggingInterceptor))
                 .addInterceptor { chain ->
-                    val request = chain.request()
-                        .newBuilder()
+                    var originalRequest = chain.request()
+                    originalRequest = originalRequest.newBuilder()
                         .header("Accept", "application/vnd.github.v3+json")
-                        .build()
-                    chain.proceed(request)
-                }
-                .addInterceptor { chain ->
-                    val request = chain.request()..newBuilder()
                         .header("User-Agent", "SentinelEditor")
                         .build()
-                    chain.proceed(request)
+                    chain.proceed(originalRequest)
                 }
                 .connectTimeout(50, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS)

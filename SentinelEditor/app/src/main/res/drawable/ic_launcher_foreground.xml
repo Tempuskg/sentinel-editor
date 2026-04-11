@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Sentinel Editor Launcher Icon Foreground
+    Licensed under Apache 2.0 via com.sentinel.editor
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Icon shape -->
+    <path
+        android:fillColor="#90caf9"
+        android:pathData="M54,54m-42,0a42,42 0,1 1,84 0a42,42 0,1 1,-84 0"/>
+    
+    <!-- Edit/Sentinel icon -->
+    <path
+        android:fillColor="#4a90e2"
+        android:pathData="M54,28 L80,42 L98,62 L88,74 L74,84 L54,76 L34,84 L20,74 L10,62 L28,42 L54,28Z"/>
+    
+    <!-- Edit tool icon hint -->
+    <path
+        android:fillColor="#ffffff"
+        android:pathData="M80,46 L96,68 L88,74 L72,52 Z"/>
+    
+</vector>

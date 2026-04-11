@@ -19,16 +19,16 @@ import java.util.concurrent.TimeUnit
 class GitHubClient private constructor(
     private val context: Context,
     private val client: OkHttpClient,
-    private val baseurl: String
+    private val baseUrl: String
 ) {
     
-    val baseurl: String = baseurl
+    val baseUrl: String = baseUrl
     
     /**
      * Build GitHubAPI client
      */
     fun makeRequest(path: String): GitHubRequest {
-        val url = baseurl + path
+        val url = baseUrl + path
         val request = Request.Builder().url(url).build()
         return GitHubRequest(this, request)
     }

@@ -31,8 +31,6 @@ object Constants {
     const val EDITOR_DEFAULT_LINE_HEIGHT = 20f // dp
     const val EDITOR_DEFAULT_CHAR_WIDTH = 20f // dp
     const val EDITOR_FONT_FAMILY = "monospace"
-    const val EDITOR_PADDING horizontal = 16
-    const val EDITOR_PADDING vertical = 16
     
     // ==================== File Paths ====================
     const val FILE_PATH_CACHE_NAME = "file_paths_cache"

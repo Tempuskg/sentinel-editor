@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    SentinelEditor Privacy Policy URL
+    Licensed under Apache 2.0 via com.sentinel.editor
+-->
+<resources>
+    <!-- Placeholder privacy policy URL -->
+    <string name="privacy_policy_url" translatable="true">https://github.com/example/sentinel-editor/blob/main/PRIVACY_POLICY.md</string>
+</resources>
