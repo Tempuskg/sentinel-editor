@@ -1,6 +1,7 @@
 package com.sentinel.editor
 
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.DisplayCutoutMode
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.sentinel.editor.ui.theme.SentinelEditorTheme
 import com.sentinel.ui.markdown.ComposeMarkdownEditor
@@ -17,11 +19,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            window?.isStatusBarColor = true
-            window?.layoutInDisplayCutoutMode = DisplayCutoutMode.NAVIGATION_BAR
-        }
-        
+        // App Theme composable wrapper
         setContent {
             AppTheme {
                 Surface(
@@ -31,6 +29,10 @@ class MainActivity : ComponentActivity() {
                     ComposeMarkdownEditor()
                 }
             }
+        }
+        // Handle display cutouts for Status Bar
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window?.layoutInDisplayCutoutMode = DisplayCutoutMode.NAVIGATION_BAR
         }
     }
     
