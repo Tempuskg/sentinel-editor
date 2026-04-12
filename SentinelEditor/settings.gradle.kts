@@ -11,6 +11,7 @@ pluginManagement {
         google()
         mavenCentral()
         gradlePluginPortal()
+        maven("https://dl.google.com/dl/android/maven2/")
     }
 }
 
