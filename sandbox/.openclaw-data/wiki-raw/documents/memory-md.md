@@ -1,3 +1,11 @@
+# Raw: MEMORY.md
+
+Captured: 2026-04-12
+Source: /MEMORY.md (workspace root)
+Type: Executive summary / bootstrap context
+
+---
+
 # MEMORY.md
 
 Executive summary for Metatron. Use this as the bootstrap layer for long-term context; use the wiki for detail.
@@ -13,15 +21,6 @@ Executive summary for Metatron. Use this as the bootstrap layer for long-term co
 - the-crucible is a NemoClaw sandbox with shared GPU-backed local inference.
 - Current local provider route is `ollama-local`; active model was recently switched to `qwen3.5:9b-64k`.
 - `MEMORY.md` is only the executive summary. For historical detail, entities, analyses, and raw sources, start at `wiki/index.md`.
-
-## Wiki State
-
-- **Wiki initialized:** 2026-04-12
-- **Pages:** 18 wiki pages + 3 special files (index, log, overview)
-- **Entities (6):** Metatron, Darren, Uriel, Jophiel, Gabriel, Sentinel Editor
-- **Concepts (6):** The Crucible, Multi-Agent Workflow, Jetpack Compose, Room Database, GitHub API Integration, WYSIWYG Editing
-- **Sources (6):** MEMORY.md, SOUL.md, README, M1 Summary, M3 Report, CHANGELOG
-- **Open questions:** Milestone 2 gap, OAuth PAT fallback status, rate limiter bug status, launcher icons status
 
 ## Known Agents
 
