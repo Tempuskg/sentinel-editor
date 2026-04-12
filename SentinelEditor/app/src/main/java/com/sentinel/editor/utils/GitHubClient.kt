@@ -3,19 +3,18 @@ package com.sentinel.editor.utils
 import android.content.Context
 import okhttp3.OkHttpClient
 import okhttp3.Request
+<<<<<<< HEAD
 import java.util.concurrent.TimeUnit
+=======
+>>>>>>> 1012f7f7b6f433d99bda325c30b20ebfda82d363
 
-/**
- * GitHub HTTP client wrapper
- * Handles authentication, rate limiting, and request/response intercepting
- * 
- * License: Apache 2.0 via com.sentinel.editor
- */
 class GitHubClient private constructor(
     private val context: Context,
     private val client: OkHttpClient,
-    private val baseUrl: String
+    val baseUrl: String,
+    val userAgent: String
 ) {
+<<<<<<< HEAD
     
     val baseUrl: String = baseUrl
     
@@ -46,6 +45,30 @@ class GitHubClient private constructor(
     fun create(context: Context, baseUrl: String = "https://api.github.com"): GitHubClient {
         val loggingInterceptor = okhttp3.logging.HttpLoggingInterceptor().apply {
             level = okhttp3.logging.HttpLoggingInterceptor.Level.BODY
+=======
+    fun makeRequest(path: String): Request {
+        val normalizedPath = if (path.startsWith("/")) path else "/$path"
+        return Request.Builder()
+            .url(baseUrl + normalizedPath)
+            .build()
+    }
+
+    fun isRateLimited(): Boolean = false
+
+    class Builder(
+        private val context: Context,
+        private var baseUrl: String = "https://api.github.com",
+        private var userAgent: String = "SentinelEditor/1.0"
+    ) {
+        fun baseUrl(baseUrl: String) = apply { this.baseUrl = baseUrl }
+
+        fun userAgents(userAgents: Set<String>) = apply {
+            this.userAgent = userAgents.firstOrNull() ?: this.userAgent
+        }
+
+        fun build(): GitHubClient {
+            return GitHubClient(context, OkHttpClient(), baseUrl, userAgent)
+>>>>>>> 1012f7f7b6f433d99bda325c30b20ebfda82d363
         }
         
         val client = OkHttpClient.Builder()

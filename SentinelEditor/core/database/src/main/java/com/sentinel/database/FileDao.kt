@@ -1,6 +1,7 @@
 package com.sentinel.database
 
 import androidx.room.*
+import com.sentinel.model.MarkdownFile
 
 /**
  * File DAO for managing markdown files

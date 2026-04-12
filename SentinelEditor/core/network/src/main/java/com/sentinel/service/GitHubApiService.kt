@@ -1,9 +1,19 @@
 package com.sentinel.service
 
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.Flow
+import com.sentinel.model.FileContent
+import com.sentinel.model.GitCommit
+import com.sentinel.model.NewPullRequest
+import com.sentinel.model.PullRequest
+import com.sentinel.model.RepositoryContent
+import com.sentinel.model.RepositoryInfo
+import com.sentinel.model.RepositoryItem
+import com.sentinel.model.ResponseInfo
+import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.PUT
 import retrofit2.http.Query
 
 /**
@@ -138,17 +148,7 @@ interface GitHubApiService {
         @Path("owner") owner: String,
         @Path("repo") repo: String,
         @Path("commit_sha") commitSha: String
-    ): Commit
-    
-    /**
-     * Get repository commit
-     */
-    @GET("repos/{owner}/{repo}/commits/{sha}")
-    suspend fun getCommit(
-        @Path("owner") owner: String,
-        @Path("repo") repo: String,
-        @Path("sha") sha: String
-    ): Commit
+    ): GitCommit
     
     /**
      * Get list of commits

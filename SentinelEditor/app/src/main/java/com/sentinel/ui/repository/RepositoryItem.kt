@@ -1,13 +1,11 @@
 package com.sentinel.ui.repository
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import com.sentinel.model.RepositoryInfo
 
 /**
  * Repository display item for list screens
  * Shows repository name, description, and stats
- * 
+ *
  * License: Apache 2.0 via com.sentinel.editor
  */
 data class RepositoryItem(
@@ -17,8 +15,8 @@ data class RepositoryItem(
     val createdAt: String? = null
 ) {
     fun getDisplayName(): String = repository.name
-    
-    fun getFullName(): String = "${repository.ownerName}/${name}"
-    
-    fun getLink(): String = repository.fullUrl
+
+    fun getFullName(): String = repository.full_name
+
+    fun getLink(): String = repository.html_url
 }

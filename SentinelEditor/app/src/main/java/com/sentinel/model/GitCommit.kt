@@ -11,21 +11,13 @@ data class GitCommit(
     val url: String,
     val commentsUrl: String,
     val commit: CommitDetails,
-    val author: Author,
-    val url: String? = null
+    val author: Author
 ) {
-    val authorName: String? get() = author?.name?.orElse{ "Unknown" }
-    val authorLogin: String? get() = author?.login?.orElse{ "unknown" }
-    val authorAvatar: String? get() = author?.avatarUrl?.orElse{ "" }
-    val authorDate: String? get() = author?.date?.orElse{ "" }
+    val authorName: String? get() = author.name ?: "Unknown"
+    val authorLogin: String? get() = author.login ?: "unknown"
+    val authorAvatar: String? get() = author.avatarUrl ?: ""
+    val authorDate: String? get() = author.date ?: ""
 }
-
-data class CommitDetails(
-    val url: String,
-    val sha: String,
-    val author: Author?,
-    val committer: Author?
-)
 
 data class Author(
     val name: String?,

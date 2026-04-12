@@ -30,3 +30,9 @@ data class Commit(
     val sha: String? = null,
     val url: String? = null
 )
+
+data class Meta(
+    val etag: String? = null,
+    val lastModified: String? = null,
+    val requestId: String? = null
+)

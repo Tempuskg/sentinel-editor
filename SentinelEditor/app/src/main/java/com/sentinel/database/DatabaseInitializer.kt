@@ -1,3 +1,28 @@
+<<<<<<< HEAD
+=======
+package com.sentinel.database
+
+import android.content.Context
+import androidx.room.migration.Migration
+
+/**
+ * Room database version constants
+ */
+enum class Constants(val DATABASE_VERSION: Int) {
+    V1(1),
+    V2(2)
+}
+
+/**
+ * Database converters
+ */
+object Migrations {
+    val MIGRATION_1_2 = Migration(1, 2) {
+        // Future migrations will be added here
+    }
+}
+
+>>>>>>> 1012f7f7b6f433d99bda325c30b20ebfda82d363
 /**
  * Database initialization
  * Handles schema creation, migrations, and initial data
@@ -9,6 +34,7 @@ object DatabaseInitializer {
      * Sentinel database - Concrete Room Database
      * This is what Room can actually instantiate
      */
+<<<<<<< HEAD
     @androidx.room.Database(
         entities = [GitHubAuth::class, MarkdownFile::class],
         version = 1,
@@ -61,5 +87,16 @@ object DatabaseInitializer {
             }
             return INSTANCE
         }
+=======
+    fun getInstance(context: Context): SentinelDatabase {
+        return SentinelDatabase.getInstance(context)
+    }
+    
+    /**
+     * Initialize database with default data if needed
+     */
+    fun initialize(context: Context) {
+        getInstance(context)
+>>>>>>> 1012f7f7b6f433d99bda325c30b20ebfda82d363
     }
 }

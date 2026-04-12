@@ -32,12 +32,13 @@ data class RepositoryItem(
 ) {
     val displayPath: String get() = if (name != fullName) name else "$fullName/$name"
     val updatedAtFormatted: String get() {
+        val utc = TimeZone.getTimeZone("UTC")
         return if (updatedAt.after(Date(System.currentTimeMillis() - 86400000))) {
-            SimpleDateFormat("MMM dd HH:mm", TimeZone.getTimeZone("UTC")).format(updatedAt)
+            SimpleDateFormat("MMM dd HH:mm").apply { timeZone = utc }.format(updatedAt)
         } else {
-            SimpleDateFormat("MMM dd yyyy", TimeZone.getTimeZone("UTC")).format(updatedAt)
+            SimpleDateFormat("MMM dd yyyy").apply { timeZone = utc }.format(updatedAt)
         }
     }
     
-    val fullNameWithLanguage: String get() = "${name.language ?: name}  -  ${name.stargazers_count} stars"
+    val fullNameWithLanguage: String get() = "${language ?: name}  -  $stargazers_count stars"
 }

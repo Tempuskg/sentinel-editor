@@ -1,5 +1,6 @@
 package com.sentinel.editor.utils
 
+<<<<<<< HEAD
 import java.util.concurrent.TimeUnit
 
 /**
@@ -57,12 +58,21 @@ class RateLimiter private constructor(
      */
     fun updateRemaining(remaining: Int) {
         this.remaining = remaining
+=======
+class RateLimiter(
+    initialRemaining: Int,
+    initialReset: Long = System.currentTimeMillis()
+) {
+    private var remaining: Int = initialRemaining
+    private var resetTime: Long = initialReset
+
+    fun isRateLimited(): Boolean {
+        return remaining <= 0 && System.currentTimeMillis() < resetTime
+>>>>>>> 1012f7f7b6f433d99bda325c30b20ebfda82d363
     }
-    
-    /**
-     * Update rate limit with new headers
-     */
+
     fun update(remaining: Int, reset: Long) {
+<<<<<<< HEAD
         resetTimestamp = reset
         this.remaining = remaining
     }
@@ -79,12 +89,14 @@ class RateLimiter private constructor(
      */
     fun getResetTime(): Long {
         return resetTimestamp
+=======
+        this.remaining = remaining
+        this.resetTime = reset
+>>>>>>> 1012f7f7b6f433d99bda325c30b20ebfda82d363
     }
-    
-    /**
-     * Reset rate limiter
-     */
+
     fun reset() {
+<<<<<<< HEAD
         this.remaining = limit
         resetTimestamp = System.currentTimeMillis() + limitUnit
     }
@@ -94,5 +106,9 @@ class RateLimiter private constructor(
      */
     fun getResetIn(): Long {
         return resetTimestamp - System.currentTimeMillis()
+=======
+        remaining = 50
+        resetTime = System.currentTimeMillis()
+>>>>>>> 1012f7f7b6f433d99bda325c30b20ebfda82d363
     }
 }

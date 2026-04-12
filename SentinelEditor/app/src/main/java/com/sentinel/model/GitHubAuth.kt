@@ -2,7 +2,6 @@ package com.sentinel.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import androidx.room.PrimaryKeyStrategy
 
 /**
  * GitHub auth credentials stored securely
@@ -12,7 +11,6 @@ import androidx.room.PrimaryKeyStrategy
 @Entity(tableName = "auth")
 data class GitHubAuth(
     @PrimaryKey
-    @PrimaryKeyStrategy
     val userId: String, // Unique identifier for auth session
     val accessToken: String, // Bearer token
     val scope: String = "repo,read:org",

@@ -21,8 +21,6 @@ data class RepositoryContent(
     val gitUrl: String,
     @SerializedName("download_url")
     val downloadUrl: String?,
-    @SerializedName("type")
-    val type: Type,
     @SerializedName("_links")
     val links: ContentLinks? = null
 ) {
@@ -44,7 +42,7 @@ data class ContentLinks(
     val html: String
 ) {
     val htmlUrl: String?
-        get() = links?.html?.let { "https://github.com" + it } ?: links?.html
+        get() = if (html.startsWith("http")) html else "https://github.com$html"
 }
 
 /**

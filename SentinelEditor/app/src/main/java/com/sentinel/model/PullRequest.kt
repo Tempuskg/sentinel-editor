@@ -10,7 +10,7 @@ data class PullRequest(
     val htmlUrl: String,
     val state: String,
     val title: String,
-    val user: Contributor,
+    val user: User,
     val body: String? = null,
     val merged: Boolean = false,
     val mergedAt: String? = null,
@@ -24,5 +24,5 @@ data class PullRequest(
     val reviewComments: Int = 0,
     val reviewCommentsUrl: String?,
     val mergeable: String? = null,
-    val mergedBy: Contributor? = null
+    val mergedBy: User? = null
 )

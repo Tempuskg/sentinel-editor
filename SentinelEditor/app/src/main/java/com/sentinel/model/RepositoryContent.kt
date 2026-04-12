@@ -26,3 +26,9 @@ data class RepositoryContent(
     val isFile: Boolean get() = type == "file"
     val isTruncated: Boolean get() = content?.length?.let { it > 0 && it < size } ?: false
 }
+
+data class GitMetadata(
+    val sha: String? = null,
+    val url: String? = null,
+    val htmlUrl: String? = null
+)

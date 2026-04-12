@@ -32,13 +32,7 @@ data class RepositoryItem(
     val defaultBranch: String? = null,
     val pushedAt: String? = null,
     val updatedAt: String
-) {
-    @get:SerializedName("updated_at")
-    fun getUpdatedDate(): String? = updatedAt
-
-    @get:SerializedName("created_at")
-    fun getCreatedAt(): String? = null
-}
+)
 
 /**
  * GitHub API response for repository owner/user
