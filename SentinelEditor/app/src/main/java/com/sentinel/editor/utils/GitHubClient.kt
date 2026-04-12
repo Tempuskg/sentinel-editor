@@ -1,13 +1,8 @@
 package com.sentinel.editor.utils
 
 import android.content.Context
-import android.content.SharedPreferences
-import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.ResponseBody
-import okhttp3.internal.http.HttpMethod
-import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 /**
@@ -24,8 +19,10 @@ class GitHubClient private constructor(
     
     val baseUrl: String = baseUrl
     
+    val userAgent: String = "SentinelEditor/1.0"
+    
     /**
-     * Build GitHubAPI client
+     * Create request from path
      */
     fun makeRequest(path: String): GitHubRequest {
         val url = baseUrl + path
@@ -36,20 +33,80 @@ class GitHubClient private constructor(
     /**
      * Check if rate limited
      */
+    @Deprecated("Use OkHttp response headers directly")
     fun isRateLimited(): Boolean {
-        val client = client
-        val response = client.newCall(request).execute()
-        val rateLimitHeader = response.headers["X-RateLimit-Remaining"].toIntOrNull() ?: 50
-        return rateLimitHeader < 5
+        // In a real implementation, check response headers
+        return false
     }
     
-    companion object {
-        fun Builder(
-            context: Context,
-            baseUrl: String = "https://api.github.com",
-            userAgent: String = "SentinelEditor/1.0"
-        ): Builder {
-            return Builder(context, baseUrl, userAgent)
+    /**
+     * Create new client instance
+     */
+    @JvmStatic
+    fun create(context: Context, baseUrl: String = "https://api.github.com"): GitHubClient {
+        val loggingInterceptor = okhttp3.logging.HttpLoggingInterceptor().apply {
+            level = okhttp3.logging.HttpLoggingInterceptor.Level.BODY
         }
+        
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                var originalRequest = chain.request()
+                originalRequest = originalRequest.newBuilder()
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .header("User-Agent", userAgent)
+                    .build()
+                chain.proceed(originalRequest)
+            }
+            .connectTimeout(50, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .build()
+        
+        return GitHubClient(context, client, baseUrl)
     }
+}
+
+/**
+ * GitHub API request wrapper
+ */
+class GitHubRequest(
+    private val client: GitHubClient,
+    val request: Request
+) {
+    
+    private val path: String
+        get() = request.url.toString().removePrefix(client.baseUrl).removePrefix("/")
+    
+    /**
+     * Execute request with authentication
+     */
+    suspend fun execute(
+        token: String,
+        path: String = this.path
+    ): GitHubResponse {
+        val requestBuilder = request.newBuilder()
+            .header("Authorization", "token $token")
+            .header("Accept", "application/vnd.github.v3+json")
+            .header("User-Agent", client.userAgent)
+        
+        // TODO: Implement actual GitHub API call
+        val response = GitHubResponse(client.baseUrl + path, requestBuilder.build())
+        return response
+    }
+}
+
+/**
+ * GitHub API response wrapper
+ */
+data class GitHubResponse(
+    val code: Int,
+    val body: String? = null,
+    val headers: Map<String, String> = emptyMap()
+) {
+    
+    val success: Boolean
+        get() = code in 200..299
+    
+    val isOk: Boolean
+        get() = code == 200
 }

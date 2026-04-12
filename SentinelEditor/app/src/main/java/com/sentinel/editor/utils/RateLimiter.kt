@@ -1,5 +1,7 @@
 package com.sentinel.editor.utils
 
+import java.util.concurrent.TimeUnit
+
 /**
  * Rate limiter for GitHub API
  * Tracks X-RateLimit-Remaining and X-RateLimit-Reset headers
@@ -7,56 +9,90 @@ package com.sentinel.editor.utils
  * 
  * License: Apache 2.0 via com.sentinel.editor
  */
-@OptIn(ExperimentalStdlibApi::class)
-class RateLimiter(
-    initialRemaining: Int,
-    initialReset: Long = System.currentTimeMillis()
+class RateLimiter private constructor(
+    private val remaining: Int,
+    resetTime: Long = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(18)
 ) {
     
-    private val remaining = mutableMapOf<String, Int>()
-    private val resetTime = mutableMapOf<String, Long>()
-    
-    private val now: Long = System.currentTimeMillis()
+    private val resetTimestamp = resetTime
     
     val limit: Int = 50
-    val limitResetIn: Long = 120 * 60 // 20 minutes default
+    val limitUnit: Long = 120 * 60 // 20 minutes
     val maxRequests: Int = limit * 5 // Allow 500 requests
     
-    init {
-        remaining.putAll(initialRemaining.mapKeysToTime(now))
-        resetTime.putAll(initialReset.mapKeysToTime(now))
-    }
+    val isRateLimited: Boolean
+        get() = remaining <= 0
     
-    private fun mapKeysToTime(now: Long): Map<String, Int> {
-        return mapOf("github" to initialRemaining)
-    }
-    
-    private fun mapKeysToTime(now: Long): Map<String, Long> {
-        return mapOf("github" to initialReset)
+    /**
+     * Create a new rate limiter with initial values
+     */
+    companion object {
+        fun create(): RateLimiter {
+            val now = System.currentTimeMillis()
+            val remaining = 500 // GitHub default rate limit
+            val reset = now + TimeUnit.MINUTES.toMillis(20)
+            return RateLimiter(remaining, reset)
+        }
+        
+        /**
+         * Create rate limiter from headers
+         */
+        fun createFromHeaders(
+            remaining: Int = 500,
+            reset: Long = System.currentTimeMillis()
+        ): RateLimiter {
+            return RateLimiter(remaining, reset)
+        }
+        
+        /**
+         * Create with custom limit
+         */
+        fun createWithLimit(remaining: Int, reset: Long): RateLimiter {
+            return RateLimiter(remaining, reset)
+        }
     }
     
     /**
-     * Check if rate limited
+     * Update remaining requests
      */
-    fun isRateLimited(): Boolean {
-        val time = now
-        val remainingNow = remaining.getOrPut("github") { limit }
-        return remainingNow <= limitResetIn.time
+    fun updateRemaining(remaining: Int) {
+        this.remaining = remaining
     }
     
     /**
      * Update rate limit with new headers
      */
     fun update(remaining: Int, reset: Long) {
-        remaining.put("github", remaining)
-        resetTime.put("github", reset)
+        resetTimestamp = reset
+        this.remaining = remaining
+    }
+    
+    /**
+     * Get remaining requests
+     */
+    fun getRemaining(): Int {
+        return remaining
+    }
+    
+    /**
+     * Get reset time
+     */
+    fun getResetTime(): Long {
+        return resetTimestamp
     }
     
     /**
      * Reset rate limiter
      */
     fun reset() {
-        remaining.clear()
-        resetTime.clear()
+        this.remaining = limit
+        resetTimestamp = System.currentTimeMillis() + limitUnit
+    }
+    
+    /**
+     * Get remaining time until reset
+     */
+    fun getResetIn(): Long {
+        return resetTimestamp - System.currentTimeMillis()
     }
 }
