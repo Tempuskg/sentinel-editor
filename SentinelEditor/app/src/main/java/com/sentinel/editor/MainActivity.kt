@@ -8,21 +8,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.sentinel.editor.ui.EditorLayout
+import androidx.navigation.compose.rememberNavController
+import com.sentinel.editor.navigation.NavGraph
 import com.sentinel.editor.ui.theme.SentinelEditorTheme
 
 class MainActivity : ComponentActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // App Theme composable wrapper
         setContent {
-            SentinelEditorTheme { // AppTheme -> SentinelEditorTheme
+            SentinelEditorTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    EditorLayout(file = null)
+                    val navController = rememberNavController()
+                    NavGraph(navController = navController)
                 }
             }
         }
