@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // App Theme composable wrapper
         setContent {
-            AppTheme {
+            SentinelEditorTheme { // AppTheme -> SentinelEditorTheme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
