@@ -3,13 +3,13 @@ package com.sentinel.editor
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.view.DisplayCutoutMode
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.DisplayCutoutMode
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.sentinel.editor.ui.theme.SentinelEditorTheme
 import com.sentinel.ui.markdown.ComposeMarkdownEditor
