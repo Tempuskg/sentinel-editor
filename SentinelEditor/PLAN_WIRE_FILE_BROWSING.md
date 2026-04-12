@@ -2,7 +2,7 @@
 
 ## TL;DR
 
-The app shows "No file selected" because the entire UI→API→data pipeline is disconnected. Models, API interfaces, and DAOs all exist but nothing is wired together — no ViewModels, no Retrofit instance, no real navigation routes. This plan adds the minimum viable flow: **Token Entry → Repo List → File Browser → Editor** in small, isolated steps a qwen3.5:9b model can execute sequentially.
+The app shows "No file selected" because the entire UI→API→data pipeline is disconnected. Models, API interfaces, and DAOs all exist but nothing is wired together — no ViewModels, no Retrofit instance, no real navigation routes. This plan adds the minimum viable flow: **Token Entry → Repo List → File Browser → Editor** in small, isolated steps Metatron can execute sequentially.
 
 ## Architecture Decisions
 
@@ -155,7 +155,7 @@ The app shows "No file selected" because the entire UI→API→data pipeline is 
 - **PAT-only auth:** No OAuth flow — matches current app state (PAT is already the documented approach)
 - **Excluded:** PR management, branch switching, settings screen, commit flow, markdown rendering — all deferred
 
-## Executor Notes (for qwen3.5:9b)
+## Executor Notes (for Metatron)
 
 - Execute steps **sequentially** — each depends on prior steps
 - Steps 3-6 (UI screens) can be done in any order, but must all complete before Step 7 (navigation wiring)
