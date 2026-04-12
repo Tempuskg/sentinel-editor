@@ -1,114 +1,53 @@
 package com.sentinel.editor.utils
 
-<<<<<<< HEAD
 import java.util.concurrent.TimeUnit
 
 /**
  * Rate limiter for GitHub API
- * Tracks X-RateLimit-Remaining and X-RateLimit-Reset headers
- * Implements 20-minute sliding window from GitHub rate policy
- * 
- * License: Apache 2.0 via com.sentinel.editor
+ * Tracks remaining requests and reset time.
  */
 class RateLimiter private constructor(
-    private val remaining: Int,
-    resetTime: Long = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(18)
+    private var remaining: Int,
+    private var resetTime: Long
 ) {
-    
-    private val resetTimestamp = resetTime
-    
-    val limit: Int = 50
-    val limitUnit: Long = 120 * 60 // 20 minutes
-    val maxRequests: Int = limit * 5 // Allow 500 requests
-    
-    val isRateLimited: Boolean
-        get() = remaining <= 0
-    
-    /**
-     * Create a new rate limiter with initial values
-     */
-    companion object {
-        fun create(): RateLimiter {
-            val now = System.currentTimeMillis()
-            val remaining = 500 // GitHub default rate limit
-            val reset = now + TimeUnit.MINUTES.toMillis(20)
-            return RateLimiter(remaining, reset)
-        }
-        
-        /**
-         * Create rate limiter from headers
-         */
-        fun createFromHeaders(
-            remaining: Int = 500,
-            reset: Long = System.currentTimeMillis()
-        ): RateLimiter {
-            return RateLimiter(remaining, reset)
-        }
-        
-        /**
-         * Create with custom limit
-         */
-        fun createWithLimit(remaining: Int, reset: Long): RateLimiter {
-            return RateLimiter(remaining, reset)
-        }
-    }
-    
-    /**
-     * Update remaining requests
-     */
-    fun updateRemaining(remaining: Int) {
-        this.remaining = remaining
-=======
-class RateLimiter(
-    initialRemaining: Int,
-    initialReset: Long = System.currentTimeMillis()
-) {
-    private var remaining: Int = initialRemaining
-    private var resetTime: Long = initialReset
 
     fun isRateLimited(): Boolean {
         return remaining <= 0 && System.currentTimeMillis() < resetTime
->>>>>>> 1012f7f7b6f433d99bda325c30b20ebfda82d363
     }
 
     fun update(remaining: Int, reset: Long) {
-<<<<<<< HEAD
-        resetTimestamp = reset
-        this.remaining = remaining
-    }
-    
-    /**
-     * Get remaining requests
-     */
-    fun getRemaining(): Int {
-        return remaining
-    }
-    
-    /**
-     * Get reset time
-     */
-    fun getResetTime(): Long {
-        return resetTimestamp
-=======
         this.remaining = remaining
         this.resetTime = reset
->>>>>>> 1012f7f7b6f433d99bda325c30b20ebfda82d363
     }
 
-    fun reset() {
-<<<<<<< HEAD
+    fun reset(limit: Int = 50, windowMinutes: Long = 20) {
         this.remaining = limit
-        resetTimestamp = System.currentTimeMillis() + limitUnit
+        this.resetTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(windowMinutes)
     }
-    
-    /**
-     * Get remaining time until reset
-     */
-    fun getResetIn(): Long {
-        return resetTimestamp - System.currentTimeMillis()
-=======
-        remaining = 50
-        resetTime = System.currentTimeMillis()
->>>>>>> 1012f7f7b6f433d99bda325c30b20ebfda82d363
+
+    fun getRemaining(): Int = remaining
+
+    fun getResetTime(): Long = resetTime
+
+    fun getResetIn(): Long = (resetTime - System.currentTimeMillis()).coerceAtLeast(0L)
+
+    companion object {
+        fun create(): RateLimiter {
+            return RateLimiter(
+                remaining = 500,
+                resetTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(20)
+            )
+        }
+
+        fun createFromHeaders(
+            remaining: Int = 500,
+            reset: Long = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(20)
+        ): RateLimiter {
+            return RateLimiter(remaining, reset)
+        }
+
+        fun createWithLimit(remaining: Int, reset: Long): RateLimiter {
+            return RateLimiter(remaining, reset)
+        }
     }
 }
