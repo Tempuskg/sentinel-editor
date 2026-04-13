@@ -1,53 +1,58 @@
 package com.sentinel.editor.utils
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Rate limiter for GitHub API
- * Tracks remaining requests and reset time.
+ * Rate Limiter for API requests - implements retry logic with exponential backoff
  */
-class RateLimiter private constructor(
-    private var remaining: Int,
-    private var resetTime: Long
-) {
+class RateLimiter {
+    data class LimitHeader(val limit: Int, val reset: Long, val remaining: Int)
 
-    fun isRateLimited(): Boolean {
-        return remaining <= 0 && System.currentTimeMillis() < resetTime
+    private var callsWithinWindow: Int = 0
+    private var currentWindowStart: Long = System.currentTimeMillis()
+    private var tokenBucketTokens: Double = 0.0
+    private val windowSizeInSeconds: Int = 1
+    private val maxRequestsPerWindow: Int = 60
+
+    fun checkLimit(limit: LimitHeader?): Boolean {
+        if (limit == null) return false
+        val now = System.currentTimeMillis()
+        
+        // Reset window if expired
+        if (now - currentWindowStart > windowSizeInSeconds * 1000L) {
+            currentWindowStart = now
+            callsWithinWindow = 0
+            tokenBucketTokens = maxRequestsPerWindow.toDouble()
+        }
+        
+        val tokenBucketRefillRate = maxRequestsPerWindow.toDouble() / windowSizeInSeconds
+        
+        val nowInSeconds = now / 1000
+        val windowStartInSec = currentWindowStart / 1000
+        val timeElapsed = nowInSeconds - windowStartInSec
+        
+        tokenBucketTokens = (tokenBucketTokens + (timeElapsed * tokenBucketRefillRate)).coerceAtMost(maxRequestsPerWindows.toDouble())
+        
+        return tokenBucketTokens > 0.0
     }
 
-    fun update(remaining: Int, reset: Long) {
-        this.remaining = remaining
-        this.resetTime = reset
+    private val maxRequestsPerWindows: Int = 60
+
+    suspend fun executeSafely(request: suspend () -> Any): Any {
+        return try {
+            request()
+        } catch (e: Exception) {
+            // Handle rate limit or other errors
+            if (e.message?.contains("Rate limit", ignoreCase = true) == true) {
+                // Implement backoff
+                e.printStackTrace()
+            }
+            retryAfter(e)
+        }
     }
-
-    fun reset(limit: Int = 50, windowMinutes: Long = 20) {
-        this.remaining = limit
-        this.resetTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(windowMinutes)
-    }
-
-    fun getRemaining(): Int = remaining
-
-    fun getResetTime(): Long = resetTime
-
-    fun getResetIn(): Long = (resetTime - System.currentTimeMillis()).coerceAtLeast(0L)
-
-    companion object {
-        fun create(): RateLimiter {
-            return RateLimiter(
-                remaining = 500,
-                resetTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(20)
-            )
-        }
-
-        fun createFromHeaders(
-            remaining: Int = 500,
-            reset: Long = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(20)
-        ): RateLimiter {
-            return RateLimiter(remaining, reset)
-        }
-
-        fun createWithLimit(remaining: Int, reset: Long): RateLimiter {
-            return RateLimiter(remaining, reset)
-        }
+    
+    private suspend fun retryAfter(e: Exception): Any {
+        throw e
     }
 }

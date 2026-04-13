@@ -1,9 +1,5 @@
 package com.sentinel.editor.utils
 
-import com.github.android.github.OkHttpConfig
-import com.github.android.github.OAuthActivity
-import com.github.android.github.OAuthCredentialsManager
-import com.github.android.github.OAuthCredentialsManagerProvider
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -31,31 +27,20 @@ class RetrofitProvider(private val token: String) {
                 val request = chain.request()
                 val newRequest = request.newBuilder()
                     .addHeader("Authorization", "token $token")
-                    .addInterceptor { inner ->
-                        OAuthCredentialsManagerProvider
-                            .create(OAuthActivity::class.java)
-                            .getCredentials()?.let { creds ->
-                                newRequest.addHeader(
-                                    OAuthCredentialsManager.CREDENTIALS_KEY,
-                                    "${creds.clientId}:${creds.clientSecret}"
-                                )
-                            } ?: newRequest
-                        inner.proceed(newRequest.build())
-                    }
                     .build()
-                chain.proceed(newRequest.build())
+                chain.proceed(newRequest)
             }
             .addInterceptor(loggingInterceptor)
             .retryOnConnectionFailure(true)
             .build()
     }
-    @Suppress("UNCHECKED_CAST")
-    fun create(): GitHubApiService {
+    
+    fun create(): com.sentinel.service.GitHubApiService {
         val retrofit = Retrofit.Builder()
             .baseUrl("https://api.github.com/")
             .client(githubClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-        return retrofit.create(GitHubApiService::class.java) as GitHubApiService
+        return retrofit.create(com.sentinel.service.GitHubApiService::class.java)
     }
 }

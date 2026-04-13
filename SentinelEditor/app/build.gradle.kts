@@ -60,21 +60,29 @@ dependencies {
     
     // Compose BOM for synchronized versions
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    
+    // Core Compose runtime (API + UI)
     implementation(composeBom)
     androidTestImplementation(composeBom)
-
-    // Core Compose runtime
+    
+    // Core runtime classes
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     
-    // AndroidX Activity & Lifecycle
+    // Compose Foundation (required for modern Compose)
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.foundation:foundation-layout")
+    implementation("androidx.compose.foundation:foundation-layout-android")
+    
+    // Compose Material Icons
+    implementation("androidx.compose.material:material-icons-extended:1.7.1")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
     
-    // Navigation
+    // Navigation Compose (with primitives)
     implementation("androidx.navigation:navigation-compose:2.8.4")
     
     // Room
@@ -112,9 +120,6 @@ dependencies {
     // OKHttp + Retrofit adapter
     implementation("com.squareup.okhttp3:okhttp-urlconnection:$okhttpVersion")
     
-    // Kotlin GitHub API placeholder version (currently unused)
-    val githubApiVersion = "1.318"
-    
     // =========== NETWORKING & PROTOCOLS ===========
     
     // Gson (Apache-2.0) - JSON serialization
@@ -136,9 +141,6 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.3.0")
     implementation("androidx.compose.material:material-icons-extended:1.7.1")
     
-    // Compose Material3 Icons
-    implementation("androidx.compose.material:material-icons-extended:1.7.1")
-    
     // Lottie for animations (Apache-2.0)
     implementation("com.airbnb.android:lottie-compose:6.6.0")
     
@@ -150,25 +152,15 @@ dependencies {
     implementation("com.google.accompanist:accompanist-pager:0.36.0")
     implementation("com.google.accompanist:accompanist-permissions:0.36.0")
     
-    // =========== COMPOSITION & STATE ===========
+    // =========== DI (Koin) ===========
     
-    // Develocity (Gradle Enterprise) - for build metrics
-    implementation("de.undercouch:gradle-download-task:5.6.0") // Task dependencies
-
-    // =========== PERMISSIONS ===========
+    // Koin for dependency injection (Apache-2.0)
+    val koinVersion = "3.5.6"
+    implementation("io.insert-koin:koin-androidx-compose:$koinVersion")
+    implementation("io.insert-koin:koin-androidx-navigation:$koinVersion")
+    implementation("io.insert-koin:koin-android:$koinVersion")
     
-    // Request permissions API compose integration
-    implementation("com.google.accompanist:accompanist-permissions:0.36.0")
-
-    // =========== TESTING ===========
+    // =========== STATE MANAGEMENT ===========
     
-    // Coroutines test
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
-    
-    // Espresso
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-    androidTestImplementation("androidx.test.espresso:espresso-intents:3.6.1")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    // Kotlinx StateFlow (via coroutines)
 }
