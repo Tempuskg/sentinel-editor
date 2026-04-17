@@ -1,5 +1,6 @@
 package com.sentinel.service
 
+import com.google.gson.annotations.SerializedName
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -51,6 +52,31 @@ interface GitHubApiService {
         @Query("ref") ref: String? = null
     ): Response<ContentResponse>
 
+    /** List contents of the root directory of a repository */
+    @GET("repos/{owner}/{repo}/contents")
+    suspend fun getRootContents(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Query("ref") ref: String? = null
+    ): Response<List<ContentResponse>>
+
+    /** List contents of a sub-directory. path must be non-empty. */
+    @GET("repos/{owner}/{repo}/contents/{path}")
+    suspend fun getDirContents(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Path(value = "path", encoded = true) path: String,
+        @Query("ref") ref: String? = null
+    ): Response<List<ContentResponse>>
+
+    /** Get a single file with its base64-encoded content. */
+    @GET("repos/{owner}/{repo}/contents/{path}")
+    suspend fun getFileContent(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Path(value = "path", encoded = true) path: String
+    ): Response<FileContentResponse>
+
     @GET("repos/{owner}/{repo}/tags")
     suspend fun getRepoTags(
         @Path("owner") owner: String,
@@ -72,17 +98,38 @@ data class UserResponse(val name: String?, val email: String?, val htmlUrl: Stri
 data class OrganizationResponse(val name: String, val htmlUrl: String)
 data class SearchReposResponse(val items: List<RepositoryResponse>, val totalCount: Int)
 data class PageResponse(val items: List<RepositoryResponse>, val totalSize: Int, val totalPages: Int)
-data class ContentResponse(val sha: String, val name: String, val type: String, val encoding: String?, val size: Int)
+data class ContentResponse(
+    val sha: String,
+    val name: String,
+    val path: String = "",
+    val type: String,
+    val encoding: String? = null,
+    val size: Int,
+    @SerializedName("download_url") val downloadUrl: String? = null
+) {
+    val isDir: Boolean get() = type == "dir"
+    val isFile: Boolean get() = type == "file"
+}
+
+data class FileContentResponse(
+    val name: String,
+    val path: String,
+    val sha: String,
+    val size: Int,
+    val type: String,
+    val content: String? = null,
+    val encoding: String? = null
+)
 
 // Repository response model
 data class RepositoryResponse(
     val name: String,
-    val fullName: String,
-    val htmlUrl: String,
+    @SerializedName("full_name") val fullName: String,
+    @SerializedName("html_url") val htmlUrl: String,
     val description: String?,
     val private: Boolean,
-    val openIssuesCount: Int,
-    val stargazersCount: Int,
-    val forksCount: Int,
-    val language: String?
+    @SerializedName("open_issues_count") val openIssuesCount: Int = 0,
+    @SerializedName("stargazers_count") val stargazersCount: Int = 0,
+    @SerializedName("forks_count") val forksCount: Int = 0,
+    val language: String? = null
 )
