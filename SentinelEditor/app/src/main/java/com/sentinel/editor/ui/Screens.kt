@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -310,12 +311,79 @@ fun EditorLayout(
     fileName: String? = null,
     content: String? = null,
     isLoading: Boolean = false,
+    isDirty: Boolean = false,
+    isSaving: Boolean = false,
+    saveError: String? = null,
+    lastCommitMessage: String? = null,
+    onContentChange: (String) -> Unit = {},
+    onSave: (String) -> Unit = {},
     onBack: () -> Unit = {}
 ) {
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var commitMessage by remember(fileName) {
+        mutableStateOf(fileName?.let { "Update $it" } ?: "Update file")
+    }
+    val isMarkdownFile = remember(fileName) {
+        fileName
+            ?.lowercase()
+            ?.let { name ->
+                name.endsWith(".md") ||
+                    name.endsWith(".markdown") ||
+                    name.endsWith(".mdown") ||
+                    name.endsWith(".mkd")
+            } == true
+    }
+
+    if (showSaveDialog) {
+        AlertDialog(
+            onDismissRequest = { showSaveDialog = false },
+            title = { Text("Save changes") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Create a Git commit for the current file changes.")
+                    OutlinedTextField(
+                        value = commitMessage,
+                        onValueChange = { commitMessage = it },
+                        label = { Text("Commit message") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onSave(commitMessage)
+                        showSaveDialog = false
+                    },
+                    enabled = !isSaving
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(fileName ?: "Editor") },
+                title = {
+                    Column {
+                        Text(fileName ?: "Editor")
+                        if (isDirty) {
+                            Text(
+                                "Unsaved changes",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -323,20 +391,67 @@ fun EditorLayout(
                             contentDescription = "Back"
                         )
                     }
+                },
+                actions = {
+                    if (content != null) {
+                        IconButton(
+                            onClick = { showSaveDialog = true },
+                            enabled = !isSaving && isDirty
+                        ) {
+                            if (isSaving) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.Save,
+                                    contentDescription = "Save"
+                                )
+                            }
+                        }
+                    }
                 }
             )
         }
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            if (saveError != null) {
+                Text(
+                    text = saveError,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            } else if (lastCommitMessage != null && !isDirty) {
+                Text(
+                    text = "Saved to GitHub: $lastCommitMessage",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
             when {
                 isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 content == null -> Text(
                     "No file selected",
                     modifier = Modifier.align(Alignment.Center)
+                )
+                isMarkdownFile -> MarkdownEditorContent(
+                    content = content,
+                    onContentChange = onContentChange,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
                 )
                 else -> SelectionContainer {
                     Text(
@@ -350,6 +465,20 @@ fun EditorLayout(
                     )
                 }
             }
+            }
         }
     }
+}
+
+@Composable
+private fun MarkdownEditorContent(
+    content: String,
+    onContentChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    RichMarkdownEditor(
+        content = content,
+        onContentChange = onContentChange,
+        modifier = modifier
+    )
 }

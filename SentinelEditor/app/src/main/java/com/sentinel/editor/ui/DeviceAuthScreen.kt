@@ -1,8 +1,5 @@
 package com.sentinel.editor.ui
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
@@ -69,33 +66,25 @@ fun DeviceAuthScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // Copy code & open browser
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        Button(
+            onClick = {
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse(verificationUri))
+                )
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
-            OutlinedButton(
-                onClick = {
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("GitHub code", userCode))
-                },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Copy Code")
-            }
-            Button(
-                onClick = {
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("GitHub code", userCode))
-                    context.startActivity(
-                        Intent(Intent.ACTION_VIEW, Uri.parse(verificationUri))
-                    )
-                },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Open GitHub")
-            }
+            Text("Open GitHub")
         }
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            "GitHub does not allow this device code to be pasted here. Open GitHub and type the code manually.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
 
         Spacer(Modifier.height(8.dp))
 

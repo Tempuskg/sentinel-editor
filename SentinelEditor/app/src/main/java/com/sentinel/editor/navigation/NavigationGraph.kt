@@ -107,6 +107,12 @@ fun NavigationGraph(navController: NavHostController) {
                 fileName = state.selectedFileName,
                 content = state.selectedFileContent,
                 isLoading = state.isLoading,
+                isDirty = state.selectedFileDirty,
+                isSaving = state.isSavingFile,
+                saveError = state.saveError,
+                lastCommitMessage = state.lastCommitMessage,
+                onContentChange = viewModel::updateSelectedFileContent,
+                onSave = viewModel::saveSelectedFile,
                 onBack = { navController.popBackStack() }
             )
         }

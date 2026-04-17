@@ -77,6 +77,15 @@ interface GitHubApiService {
         @Path(value = "path", encoded = true) path: String
     ): Response<FileContentResponse>
 
+    /** Update a file using GitHub's contents API. */
+    @PUT("repos/{owner}/{repo}/contents/{path}")
+    suspend fun updateFileContent(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Path(value = "path", encoded = true) path: String,
+        @Body request: UpdateFileRequest
+    ): Response<UpdateFileResponse>
+
     @GET("repos/{owner}/{repo}/tags")
     suspend fun getRepoTags(
         @Path("owner") owner: String,
@@ -119,6 +128,29 @@ data class FileContentResponse(
     val type: String,
     val content: String? = null,
     val encoding: String? = null
+)
+
+data class UpdateFileRequest(
+    val message: String,
+    val content: String,
+    val sha: String,
+    val branch: String? = null
+)
+
+data class UpdateFileResponse(
+    val content: UpdatedFileContent? = null,
+    val commit: UpdatedCommit? = null
+)
+
+data class UpdatedFileContent(
+    val name: String,
+    val path: String,
+    val sha: String
+)
+
+data class UpdatedCommit(
+    val sha: String,
+    val message: String
 )
 
 // Repository response model

@@ -9,6 +9,7 @@ import com.sentinel.editor.utils.RetrofitProvider
 import com.sentinel.service.ContentResponse
 import com.sentinel.service.GitHubApiService
 import com.sentinel.service.RepositoryResponse
+import com.sentinel.service.UpdateFileRequest
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +26,14 @@ data class UiState(
     val currentPath: String = "",
     val files: List<ContentResponse> = emptyList(),
     val selectedFileName: String? = null,
+    val selectedFilePath: String? = null,
+    val selectedFileSha: String? = null,
     val selectedFileContent: String? = null,
+    val selectedFileOriginalContent: String? = null,
+    val selectedFileDirty: Boolean = false,
+    val isSavingFile: Boolean = false,
+    val saveError: String? = null,
+    val lastCommitMessage: String? = null,
     // Device auth flow state
     val deviceAuthUserCode: String? = null,
     val deviceAuthVerificationUri: String? = null,
@@ -42,7 +50,7 @@ class MainViewModel : ViewModel() {
          * - No client secret needed for the device flow.
          * - Enable "Device Authorization Flow" in the OAuth App settings.
          */
-        const val GITHUB_CLIENT_ID = "YOUR_CLIENT_ID_HERE"
+        const val GITHUB_CLIENT_ID = "Ov23liGPBcf5lh0UrL4q"
     }
 
     private val _state = MutableStateFlow(UiState())
@@ -131,7 +139,13 @@ class MainViewModel : ViewModel() {
                         it.copy(
                             isLoading = false,
                             selectedFileName = item.name,
-                            selectedFileContent = decoded
+                            selectedFilePath = file?.path ?: item.path,
+                            selectedFileSha = file?.sha,
+                            selectedFileContent = decoded,
+                            selectedFileOriginalContent = decoded,
+                            selectedFileDirty = false,
+                            saveError = null,
+                            lastCommitMessage = null
                         )
                     }
                 } else {
@@ -151,7 +165,81 @@ class MainViewModel : ViewModel() {
     }
 
     fun clearError() {
-        _state.update { it.copy(error = null) }
+        _state.update { it.copy(error = null, saveError = null) }
+    }
+
+    fun updateSelectedFileContent(content: String) {
+        _state.update { currentState ->
+            val originalContent = currentState.selectedFileOriginalContent
+            currentState.copy(
+                selectedFileContent = content,
+                selectedFileDirty = originalContent != null && content != originalContent,
+                saveError = null
+            )
+        }
+    }
+
+    fun saveSelectedFile(commitMessage: String) {
+        val service = apiService ?: return
+        val currentState = _state.value
+        val owner = currentState.selectedOwner
+        val repo = currentState.selectedRepo
+        val path = currentState.selectedFilePath
+        val sha = currentState.selectedFileSha
+        val content = currentState.selectedFileContent
+
+        if (owner.isBlank() || repo.isBlank() || path.isNullOrBlank() || sha.isNullOrBlank() || content == null) {
+            _state.update { it.copy(saveError = "File metadata is incomplete. Reopen the file and try again.") }
+            return
+        }
+
+        val message = commitMessage.ifBlank { "Update $path" }
+        val encodedContent = Base64.encodeToString(content.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+
+        _state.update { it.copy(isSavingFile = true, saveError = null) }
+
+        viewModelScope.launch {
+            try {
+                val response = service.updateFileContent(
+                    owner = owner,
+                    repo = repo,
+                    path = path,
+                    request = UpdateFileRequest(
+                        message = message,
+                        content = encodedContent,
+                        sha = sha
+                    )
+                )
+
+                if (response.isSuccessful) {
+                    val updatedSha = response.body()?.content?.sha ?: sha
+                    _state.update {
+                        it.copy(
+                            isSavingFile = false,
+                            selectedFileSha = updatedSha,
+                            selectedFileOriginalContent = content,
+                            selectedFileDirty = false,
+                            saveError = null,
+                            lastCommitMessage = message
+                        )
+                    }
+                } else {
+                    _state.update {
+                        it.copy(
+                            isSavingFile = false,
+                            saveError = "Failed to save file: HTTP ${response.code()}"
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        isSavingFile = false,
+                        saveError = e.message ?: "Unable to save file"
+                    )
+                }
+            }
+        }
     }
 
     // ── Device Authorization Flow ──────────────────────────────
