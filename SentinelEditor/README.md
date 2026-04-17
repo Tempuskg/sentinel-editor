@@ -271,7 +271,7 @@ See `LICENSES.md` for full list.
 ### Build
 
 ```bash
-cd /sandbox/.openclaw/workspace/SentinelEditor
+cd SentinelEditor
 ./gradlew assembleDebug
 ```
 

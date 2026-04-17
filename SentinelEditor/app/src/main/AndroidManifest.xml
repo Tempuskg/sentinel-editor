@@ -54,7 +54,7 @@
         <!-- Privacy policy required for Google Play -->
         <meta-data
             android:name="com.google.android.gms privacy_policy_url"
-            android:value="https://github.com/The-Crucibles-Uriel/sentinel-editor#privacy" />
+            android:value="https://github.com/Tempuskg/sentinel-editor#privacy" />
         
         <!-- GitHub OAuth redirect scheme -->
         <meta-data
