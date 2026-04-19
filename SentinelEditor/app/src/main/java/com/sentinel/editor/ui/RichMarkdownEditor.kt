@@ -49,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import io.noties.markwon.Markwon
@@ -72,6 +73,9 @@ private val boldPattern = Regex("\\*\\*(.+?)\\*\\*")
 private val italicPattern = Regex("(?<!\\*)\\*(?!\\*)(.+?)(?<!\\*)\\*(?!\\*)")
 private val inlineCodePattern = Regex("(?<!`)`([^`]+)`(?!`)")
 private val linkPattern = Regex("\\[([^\\]]+)]\\(([^)]+)\\)")
+private val editorPaneHorizontalPadding = 6.dp
+private val editorContentHorizontalPadding = 6.dp
+private val editorContentVerticalPadding = 12.dp
 
 @Composable
 fun RichMarkdownEditor(
@@ -113,7 +117,7 @@ fun RichMarkdownEditor(
             )
         }
 
-        HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp))
+        HorizontalDivider(modifier = Modifier.padding(bottom = 4.dp))
 
         when (editorMode) {
             MarkdownEditorMode.Wysiwyg -> {
@@ -128,7 +132,7 @@ fun RichMarkdownEditor(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = editorPaneHorizontalPadding)
                 )
             }
 
@@ -137,7 +141,7 @@ fun RichMarkdownEditor(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = editorPaneHorizontalPadding),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Surface(
@@ -189,7 +193,7 @@ fun RichMarkdownEditor(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = editorPaneHorizontalPadding)
                         .clipToBounds()
                 )
             }
@@ -206,7 +210,7 @@ private fun EditorModeSelector(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         FilterChip(
@@ -236,7 +240,7 @@ private fun MarkdownToolbar(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         AssistChip(onClick = { onFormat("**", "**", "bold") }, label = { Text("Bold") })
@@ -261,6 +265,8 @@ private fun WysiwygEditorPane(
     modifier: Modifier = Modifier
 ) {
     val inProgrammaticUpdate = remember(documentKey) { mutableStateOf(false) }
+    val contentHorizontalPaddingPx = with(LocalDensity.current) { editorContentHorizontalPadding.roundToPx() }
+    val contentVerticalPaddingPx = with(LocalDensity.current) { editorContentVerticalPadding.roundToPx() }
 
     AndroidView(
         factory = { viewContext ->
@@ -287,7 +293,12 @@ private fun WysiwygEditorPane(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
-                setPadding(24, 24, 24, 24)
+                setPadding(
+                    contentHorizontalPaddingPx,
+                    contentVerticalPaddingPx,
+                    contentHorizontalPaddingPx,
+                    contentVerticalPaddingPx
+                )
                 inputType = InputType.TYPE_CLASS_TEXT or
                     InputType.TYPE_TEXT_FLAG_MULTI_LINE or
                     InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
@@ -366,11 +377,19 @@ private fun MarkdownPreviewPane(
     onEditorPositionChange: (Int, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val contentHorizontalPaddingPx = with(LocalDensity.current) { editorContentHorizontalPadding.roundToPx() }
+    val contentVerticalPaddingPx = with(LocalDensity.current) { editorContentVerticalPadding.roundToPx() }
+
     AndroidView(
         factory = { viewContext ->
             val textView = TextView(viewContext).apply {
                 setTextColor(currentTextColor)
-                setPadding(24, 24, 24, 24)
+                setPadding(
+                    contentHorizontalPaddingPx,
+                    contentVerticalPaddingPx,
+                    contentHorizontalPaddingPx,
+                    contentVerticalPaddingPx
+                )
                 movementMethod = LinkMovementMethod.getInstance()
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,

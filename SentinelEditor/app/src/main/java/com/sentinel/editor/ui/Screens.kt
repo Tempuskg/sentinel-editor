@@ -473,7 +473,7 @@ fun EditorLayout(
                     onEditorPositionChange = onEditorPositionChange,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(16.dp)
+                        .padding(top = 0.dp)
                 )
                 else -> SelectionContainer {
                     Text(
