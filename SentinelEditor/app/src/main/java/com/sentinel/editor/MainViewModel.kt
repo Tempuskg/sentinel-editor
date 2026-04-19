@@ -1,11 +1,16 @@
 package com.sentinel.editor
 
+import android.app.Application
 import android.util.Base64
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.sentinel.editor.utils.EditorSessionManager
+import com.sentinel.editor.utils.LastOpenedDocument
 import com.sentinel.editor.utils.DeviceAuthException
 import com.sentinel.editor.utils.DeviceAuthManager
+import com.sentinel.editor.utils.GitHubTokenManager
 import com.sentinel.editor.utils.RetrofitProvider
+import com.sentinel.model.GitHubAuth
 import com.sentinel.service.ContentResponse
 import com.sentinel.service.GitHubApiService
 import com.sentinel.service.RepositoryResponse
@@ -18,6 +23,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class UiState(
+    val isCheckingAuth: Boolean = true,
+    val isAuthenticated: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
     val repositories: List<RepositoryResponse> = emptyList(),
@@ -30,10 +37,13 @@ data class UiState(
     val selectedFileSha: String? = null,
     val selectedFileContent: String? = null,
     val selectedFileOriginalContent: String? = null,
+    val selectedFileCursorPosition: Int = 0,
+    val selectedFileScrollOffset: Int = 0,
     val selectedFileDirty: Boolean = false,
     val isSavingFile: Boolean = false,
     val saveError: String? = null,
     val lastCommitMessage: String? = null,
+    val shouldNavigateToRestoredFile: Boolean = false,
     // Device auth flow state
     val deviceAuthUserCode: String? = null,
     val deviceAuthVerificationUri: String? = null,
@@ -41,7 +51,7 @@ data class UiState(
     val deviceAuthError: String? = null
 )
 
-class MainViewModel : ViewModel() {
+class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         /**
@@ -56,12 +66,41 @@ class MainViewModel : ViewModel() {
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state.asStateFlow()
 
+    private val context = application.applicationContext
     private var apiService: GitHubApiService? = null
     private var deviceAuthJob: Job? = null
+    private var persistEditorPositionJob: Job? = null
 
-    fun setToken(token: String) {
-        apiService = RetrofitProvider(token).create()
-        _state.update { it.copy(error = null) }
+    init {
+        restoreSession()
+    }
+
+    fun connectWithToken(token: String) {
+        viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    isLoading = true,
+                    error = null,
+                    deviceAuthError = null
+                )
+            }
+
+            val authError = authenticateWithToken(token = token, persistToken = true)
+            if (authError == null) {
+                _state.update { it.copy(isLoading = false, isCheckingAuth = false) }
+                loadRepositories()
+                restoreLastOpenedDocument()
+            } else {
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        isCheckingAuth = false,
+                        isAuthenticated = false,
+                        error = authError
+                    )
+                }
+            }
+        }
     }
 
     fun loadRepositories() {
@@ -122,39 +161,9 @@ class MainViewModel : ViewModel() {
     }
 
     fun openFile(item: ContentResponse) {
-        val service = apiService ?: return
         val owner = _state.value.selectedOwner
         val repo = _state.value.selectedRepo
-        _state.update { it.copy(isLoading = true, error = null) }
-        viewModelScope.launch {
-            try {
-                val response = service.getFileContent(owner, repo, item.path)
-                if (response.isSuccessful) {
-                    val file = response.body()
-                    val decoded = file?.content?.let { encoded ->
-                        val clean = encoded.replace("\n", "").replace("\r", "")
-                        String(Base64.decode(clean, Base64.DEFAULT))
-                    } ?: ""
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            selectedFileName = item.name,
-                            selectedFilePath = file?.path ?: item.path,
-                            selectedFileSha = file?.sha,
-                            selectedFileContent = decoded,
-                            selectedFileOriginalContent = decoded,
-                            selectedFileDirty = false,
-                            saveError = null,
-                            lastCommitMessage = null
-                        )
-                    }
-                } else {
-                    _state.update { it.copy(isLoading = false, error = "Failed to load file: HTTP ${response.code()}") }
-                }
-            } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false, error = e.message ?: "Network error") }
-            }
-        }
+        openFile(owner = owner, repo = repo, path = item.path, fileName = item.name)
     }
 
     fun navigateUp() {
@@ -165,7 +174,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun clearError() {
-        _state.update { it.copy(error = null, saveError = null) }
+        _state.update { it.copy(error = null, saveError = null, deviceAuthError = null) }
     }
 
     fun updateSelectedFileContent(content: String) {
@@ -177,6 +186,48 @@ class MainViewModel : ViewModel() {
                 saveError = null
             )
         }
+    }
+
+    fun updateSelectedFilePosition(cursorPosition: Int, scrollOffset: Int = 0) {
+        val currentState = _state.value
+        val path = currentState.selectedFilePath ?: return
+        val owner = currentState.selectedOwner
+        val repo = currentState.selectedRepo
+        if (owner.isBlank() || repo.isBlank()) {
+            return
+        }
+
+        val normalizedCursorPosition = cursorPosition.coerceIn(0, currentState.selectedFileContent?.length ?: 0)
+        val normalizedScrollOffset = scrollOffset.coerceAtLeast(0)
+
+        if (currentState.selectedFileCursorPosition == normalizedCursorPosition &&
+            currentState.selectedFileScrollOffset == normalizedScrollOffset
+        ) {
+            return
+        }
+
+        _state.update {
+            it.copy(
+                selectedFileCursorPosition = normalizedCursorPosition,
+                selectedFileScrollOffset = normalizedScrollOffset
+            )
+        }
+
+        persistEditorPositionJob?.cancel()
+        persistEditorPositionJob = viewModelScope.launch {
+            EditorSessionManager.updateLastOpenedDocumentPosition(
+                context = context,
+                owner = owner,
+                repo = repo,
+                path = path,
+                cursorPosition = normalizedCursorPosition,
+                scrollOffset = normalizedScrollOffset
+            )
+        }
+    }
+
+    fun consumeRestoredFileNavigation() {
+        _state.update { it.copy(shouldNavigateToRestoredFile = false) }
     }
 
     fun saveSelectedFile(commitMessage: String) {
@@ -253,6 +304,7 @@ class MainViewModel : ViewModel() {
         _state.update {
             it.copy(
                 isLoading = true,
+                error = null,
                 deviceAuthUserCode = null,
                 deviceAuthVerificationUri = null,
                 deviceAuthPolling = false,
@@ -282,15 +334,30 @@ class MainViewModel : ViewModel() {
                 )
 
                 // Success — use the token just like a PAT
-                setToken(accessToken)
-                _state.update {
-                    it.copy(
-                        deviceAuthPolling = false,
-                        deviceAuthUserCode = null,
-                        deviceAuthVerificationUri = null
-                    )
+                val authError = authenticateWithToken(token = accessToken, persistToken = true)
+                if (authError == null) {
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            isCheckingAuth = false,
+                            deviceAuthPolling = false,
+                            deviceAuthUserCode = null,
+                            deviceAuthVerificationUri = null,
+                            deviceAuthError = null
+                        )
+                    }
+                    loadRepositories()
+                } else {
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            isCheckingAuth = false,
+                            isAuthenticated = false,
+                            deviceAuthPolling = false,
+                            deviceAuthError = authError
+                        )
+                    }
                 }
-                loadRepositories()
             } catch (e: DeviceAuthException) {
                 _state.update {
                     it.copy(
@@ -311,6 +378,19 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun logout() {
+        deviceAuthJob?.cancel()
+        deviceAuthJob = null
+        persistEditorPositionJob?.cancel()
+        persistEditorPositionJob = null
+        viewModelScope.launch {
+            GitHubTokenManager.logout(context)
+            EditorSessionManager.clearLastOpenedDocument(context)
+            apiService = null
+            _state.value = UiState(isCheckingAuth = false)
+        }
+    }
+
     fun cancelDeviceAuth() {
         deviceAuthJob?.cancel()
         deviceAuthJob = null
@@ -325,9 +405,175 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    /** Returns true when the device auth flow completed successfully (token is set). */
-    fun isDeviceAuthComplete(): Boolean {
-        val s = _state.value
-        return apiService != null && s.deviceAuthUserCode == null && !s.deviceAuthPolling
+    private fun restoreSession() {
+        viewModelScope.launch {
+            val savedToken = GitHubTokenManager.getCurrentToken(context)
+            if (savedToken == null) {
+                _state.update { it.copy(isCheckingAuth = false, isAuthenticated = false) }
+                return@launch
+            }
+
+            _state.update { it.copy(isLoading = true, error = null) }
+            val authError = authenticateWithToken(
+                token = savedToken.accessToken,
+                persistToken = false
+            )
+
+            if (authError == null) {
+                _state.update { it.copy(isLoading = false, isCheckingAuth = false) }
+                loadRepositories()
+                restoreLastOpenedDocument()
+            } else {
+                GitHubTokenManager.logout(context)
+                EditorSessionManager.clearLastOpenedDocument(context)
+                _state.update {
+                    UiState(
+                        isCheckingAuth = false,
+                        error = "Saved session is no longer valid. Please sign in again."
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun authenticateWithToken(token: String, persistToken: Boolean): String? {
+        val service = RetrofitProvider(token).create()
+
+        return try {
+            val response = service.getCurrentUser()
+            if (!response.isSuccessful) {
+                apiService = null
+                return "Failed to authenticate with GitHub: HTTP ${response.code()}"
+            }
+
+            val currentUser = response.body()
+                ?: return "GitHub did not return user details."
+
+            apiService = service
+            if (persistToken) {
+                GitHubTokenManager.storeToken(
+                    context = context,
+                    auth = GitHubAuth(
+                        userId = currentUser.login,
+                        accessToken = token
+                    )
+                )
+            }
+
+            _state.update {
+                it.copy(
+                    error = null,
+                    deviceAuthError = null,
+                    isAuthenticated = true
+                )
+            }
+            null
+        } catch (e: Exception) {
+            apiService = null
+            e.message ?: "Network error"
+        }
+    }
+
+    private fun restoreLastOpenedDocument() {
+        viewModelScope.launch {
+            val lastDocument = EditorSessionManager.getLastOpenedDocument(context) ?: return@launch
+            openFile(
+                owner = lastDocument.owner,
+                repo = lastDocument.repo,
+                path = lastDocument.path,
+                fileName = lastDocument.path.substringAfterLast('/'),
+                restoredDocument = lastDocument,
+                navigateToEditor = true
+            )
+        }
+    }
+
+    private fun openFile(
+        owner: String,
+        repo: String,
+        path: String,
+        fileName: String? = null,
+        restoredDocument: LastOpenedDocument? = null,
+        navigateToEditor: Boolean = false
+    ) {
+        val service = apiService ?: return
+        if (owner.isBlank() || repo.isBlank() || path.isBlank()) {
+            return
+        }
+
+        _state.update {
+            it.copy(
+                isLoading = true,
+                error = null,
+                selectedOwner = owner,
+                selectedRepo = repo,
+                currentPath = path.substringBeforeLast('/', "")
+            )
+        }
+
+        viewModelScope.launch {
+            try {
+                val response = service.getFileContent(owner, repo, path)
+                if (response.isSuccessful) {
+                    val file = response.body()
+                    val decoded = file?.content?.let { encoded ->
+                        val clean = encoded.replace("\n", "").replace("\r", "")
+                        String(Base64.decode(clean, Base64.DEFAULT))
+                    } ?: ""
+                    val resolvedPath = file?.path ?: path
+                    val resolvedFileName = file?.name ?: fileName ?: resolvedPath.substringAfterLast('/')
+                    val sessionDocument = restoredDocument
+                        ?: EditorSessionManager.getLastOpenedDocument(context)
+                    val matchesCurrentDocument = sessionDocument?.owner == owner &&
+                        sessionDocument.repo == repo &&
+                        sessionDocument.path == resolvedPath
+                    val resolvedSessionDocument = sessionDocument.takeIf { matchesCurrentDocument }
+                    val restoredCursorPosition = if (resolvedSessionDocument != null) {
+                        resolvedSessionDocument.cursorPosition.coerceIn(0, decoded.length)
+                    } else {
+                        0
+                    }
+                    val restoredScrollOffset = if (resolvedSessionDocument != null) {
+                        resolvedSessionDocument.scrollOffset.coerceAtLeast(0)
+                    } else {
+                        0
+                    }
+
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            selectedOwner = owner,
+                            selectedRepo = repo,
+                            currentPath = resolvedPath.substringBeforeLast('/', ""),
+                            selectedFileName = resolvedFileName,
+                            selectedFilePath = resolvedPath,
+                            selectedFileSha = file?.sha,
+                            selectedFileContent = decoded,
+                            selectedFileOriginalContent = decoded,
+                            selectedFileCursorPosition = restoredCursorPosition,
+                            selectedFileScrollOffset = restoredScrollOffset,
+                            selectedFileDirty = false,
+                            isSavingFile = false,
+                            saveError = null,
+                            lastCommitMessage = null,
+                            shouldNavigateToRestoredFile = navigateToEditor
+                        )
+                    }
+
+                    EditorSessionManager.storeLastOpenedDocument(
+                        context = context,
+                        owner = owner,
+                        repo = repo,
+                        path = resolvedPath,
+                        cursorPosition = restoredCursorPosition,
+                        scrollOffset = restoredScrollOffset
+                    )
+                } else {
+                    _state.update { it.copy(isLoading = false, error = "Failed to load file: HTTP ${response.code()}") }
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Network error") }
+            }
+        }
     }
 }

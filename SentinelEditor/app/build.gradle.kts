@@ -97,6 +97,9 @@ dependencies {
     // Jetpack DataStore for settings (Kotlin-preferred over SharedPreferences)
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
+    // AndroidX Security Crypto for keystore-backed encrypted token storage
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
     // Test dependencies
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
@@ -130,10 +133,14 @@ dependencies {
     
     // =========== MARKDOWN PROCESSING ===========
     
-    // Markor markdown renderer (Apache-2.0)
+    // Markwon markdown renderer + editor (Apache-2.0)
     implementation("io.noties.markwon:core:4.6.2")
     implementation("io.noties.markwon:linkify:4.6.2")
     implementation("io.noties.markwon:html:4.6.2")
+    implementation("io.noties.markwon:editor:4.6.2")
+    implementation("io.noties.markwon:ext-strikethrough:4.6.2")
+    implementation("io.noties.markwon:ext-tables:4.6.2")
+    implementation("io.noties.markwon:ext-tasklist:4.6.2")
     
     // =========== UI & MATERIAL ===========
     

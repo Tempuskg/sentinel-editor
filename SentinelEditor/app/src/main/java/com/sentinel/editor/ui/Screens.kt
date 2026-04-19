@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -171,10 +172,23 @@ fun RepositoryListScreen(
     repos: List<RepositoryResponse> = emptyList(),
     isLoading: Boolean = false,
     error: String? = null,
+    onLogout: () -> Unit = {},
     onRepoClick: (RepositoryResponse) -> Unit = {}
 ) {
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Repositories") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Repositories") },
+                actions = {
+                    IconButton(onClick = onLogout) {
+                        Icon(
+                            Icons.Default.Logout,
+                            contentDescription = "Disconnect from GitHub"
+                        )
+                    }
+                }
+            )
+        }
     ) { padding ->
         Box(
             modifier = Modifier
@@ -309,13 +323,17 @@ fun FileExplorerScreen(
 @Composable
 fun EditorLayout(
     fileName: String? = null,
+    filePath: String? = null,
     content: String? = null,
+    cursorPosition: Int = 0,
+    scrollOffset: Int = 0,
     isLoading: Boolean = false,
     isDirty: Boolean = false,
     isSaving: Boolean = false,
     saveError: String? = null,
     lastCommitMessage: String? = null,
     onContentChange: (String) -> Unit = {},
+    onEditorPositionChange: (Int, Int) -> Unit = { _, _ -> },
     onSave: (String) -> Unit = {},
     onBack: () -> Unit = {}
 ) {
@@ -447,8 +465,12 @@ fun EditorLayout(
                     modifier = Modifier.align(Alignment.Center)
                 )
                 isMarkdownFile -> MarkdownEditorContent(
+                    documentKey = filePath ?: fileName.orEmpty(),
                     content = content,
+                    initialCursorPosition = cursorPosition,
+                    initialScrollOffset = scrollOffset,
                     onContentChange = onContentChange,
+                    onEditorPositionChange = onEditorPositionChange,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(16.dp)
@@ -472,13 +494,21 @@ fun EditorLayout(
 
 @Composable
 private fun MarkdownEditorContent(
+    documentKey: String,
     content: String,
+    initialCursorPosition: Int,
+    initialScrollOffset: Int,
     onContentChange: (String) -> Unit,
+    onEditorPositionChange: (Int, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     RichMarkdownEditor(
+        documentKey = documentKey,
         content = content,
+        initialCursorPosition = initialCursorPosition,
+        initialScrollOffset = initialScrollOffset,
         onContentChange = onContentChange,
+        onEditorPositionChange = onEditorPositionChange,
         modifier = modifier
     )
 }

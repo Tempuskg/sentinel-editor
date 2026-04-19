@@ -1,6 +1,8 @@
 package com.sentinel.editor.ui
 
 import android.text.method.LinkMovementMethod
+import android.view.ViewGroup
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -27,36 +29,68 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.sentinel.ui.markdown.MarkwonMarkdownRenderer
+import io.noties.markwon.Markwon
+import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
+import io.noties.markwon.ext.tables.TablePlugin
+import io.noties.markwon.ext.tasklist.TaskListPlugin
+import io.noties.markwon.html.HtmlPlugin
+import io.noties.markwon.linkify.LinkifyPlugin
+import kotlinx.coroutines.delay
 
 private enum class MarkdownEditorMode {
-    Edit,
+    Source,
+    WYSIWYG,
     Preview,
     Split
 }
 
 @Composable
 fun RichMarkdownEditor(
+    documentKey: String,
     content: String,
+    initialCursorPosition: Int,
+    initialScrollOffset: Int,
     onContentChange: (String) -> Unit,
+    onEditorPositionChange: (Int, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var editorValue by remember {
-        mutableStateOf(TextFieldValue(content))
-    }
-    var editorMode by remember { mutableStateOf(MarkdownEditorMode.Split) }
-
-    LaunchedEffect(content) {
-        if (content != editorValue.text) {
-            editorValue = editorValue.copy(
+    val clampedInitialCursorPosition = initialCursorPosition.coerceIn(0, content.length)
+    var editorValue by remember(documentKey) {
+        mutableStateOf(
+            TextFieldValue(
                 text = content,
-                selection = TextRange(content.length)
+                selection = TextRange(clampedInitialCursorPosition)
+            )
+        )
+    }
+    var editorMode by remember { mutableStateOf(MarkdownEditorMode.WYSIWYG) }
+    var currentScrollOffset by remember(documentKey) { mutableStateOf(initialScrollOffset) }
+
+    fun applyEditorValue(updatedValue: TextFieldValue) {
+        editorValue = updatedValue
+        onContentChange(updatedValue.text)
+        onEditorPositionChange(updatedValue.selection.max, currentScrollOffset)
+    }
+
+    // Debounced scroll-position reporting to ViewModel
+    LaunchedEffect(currentScrollOffset) {
+        delay(500)
+        onEditorPositionChange(editorValue.selection.max, currentScrollOffset)
+    }
+
+    LaunchedEffect(documentKey, content, clampedInitialCursorPosition) {
+        if (content != editorValue.text) {
+            editorValue = TextFieldValue(
+                text = content,
+                selection = TextRange(clampedInitialCursorPosition)
             )
         }
     }
@@ -64,28 +98,55 @@ fun RichMarkdownEditor(
     Column(modifier = modifier.fillMaxSize()) {
         EditorModeSelector(
             editorMode = editorMode,
-            onModeChange = { editorMode = it }
+            onModeChange = { newMode -> editorMode = newMode }
         )
 
-        MarkdownToolbar(
-            onBold = { editorValue = editorValue.wrapSelection("**", "**", "bold") },
-            onItalic = { editorValue = editorValue.wrapSelection("*", "*", "italic") },
-            onHeading = { editorValue = editorValue.prefixSelection("# ", "Heading") },
-            onCode = { editorValue = editorValue.wrapSelection("`", "`", "code") },
-            onList = { editorValue = editorValue.prefixSelection("- ", "List item") },
-            onQuote = { editorValue = editorValue.prefixSelection("> ", "Quote") },
-            onLink = { editorValue = editorValue.wrapSelection("[", "](https://)", "label") }
-        )
+        // Show the markdown command toolbar only when the user is editing source.
+        if (editorMode == MarkdownEditorMode.Source || editorMode == MarkdownEditorMode.Split) {
+            MarkdownToolbar(
+                onBold = {
+                    applyEditorValue(editorValue.wrapSelection("**", "**", "bold"))
+                },
+                onItalic = {
+                    applyEditorValue(editorValue.wrapSelection("*", "*", "italic"))
+                },
+                onHeading = {
+                    applyEditorValue(editorValue.prefixSelection("# ", "Heading"))
+                },
+                onCode = {
+                    applyEditorValue(editorValue.wrapSelection("`", "`", "code"))
+                },
+                onList = {
+                    applyEditorValue(editorValue.prefixSelection("- ", "List item"))
+                },
+                onQuote = {
+                    applyEditorValue(editorValue.prefixSelection("> ", "Quote"))
+                },
+                onLink = {
+                    applyEditorValue(editorValue.wrapSelection("[", "](https://)", "label"))
+                }
+            )
+        }
 
         HorizontalDivider(modifier = Modifier.padding(top = 12.dp, bottom = 12.dp))
 
         when (editorMode) {
-            MarkdownEditorMode.Edit -> {
+            MarkdownEditorMode.Source -> {
                 EditorPane(
                     value = editorValue,
-                    onValueChange = {
-                        editorValue = it
-                        onContentChange(it.text)
+                    onValueChange = ::applyEditorValue,
+                    requestInitialFocus = clampedInitialCursorPosition > 0,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            MarkdownEditorMode.WYSIWYG -> {
+                WysiwygPane(
+                    content = editorValue.text,
+                    documentKey = documentKey,
+                    initialScrollOffset = initialScrollOffset,
+                    onScrollChange = { scrollY ->
+                        currentScrollOffset = scrollY
                     },
                     modifier = Modifier.fillMaxSize()
                 )
@@ -94,6 +155,11 @@ fun RichMarkdownEditor(
             MarkdownEditorMode.Preview -> {
                 MarkdownPreviewPane(
                     markdown = editorValue.text,
+                    documentKey = documentKey,
+                    initialScrollOffset = initialScrollOffset,
+                    onScrollChange = { scrollY ->
+                        currentScrollOffset = scrollY
+                    },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -110,10 +176,8 @@ fun RichMarkdownEditor(
                     ) {
                         EditorPane(
                             value = editorValue,
-                            onValueChange = {
-                                editorValue = it
-                                onContentChange(it.text)
-                            },
+                            onValueChange = ::applyEditorValue,
+                            requestInitialFocus = clampedInitialCursorPosition > 0,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -146,9 +210,14 @@ private fun EditorModeSelector(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         FilterChip(
-            selected = editorMode == MarkdownEditorMode.Edit,
-            onClick = { onModeChange(MarkdownEditorMode.Edit) },
-            label = { Text("Edit") }
+            selected = editorMode == MarkdownEditorMode.Source,
+            onClick = { onModeChange(MarkdownEditorMode.Source) },
+            label = { Text("Source") }
+        )
+        FilterChip(
+            selected = editorMode == MarkdownEditorMode.WYSIWYG,
+            onClick = { onModeChange(MarkdownEditorMode.WYSIWYG) },
+            label = { Text("WYSIWYG") }
         )
         FilterChip(
             selected = editorMode == MarkdownEditorMode.Preview,
@@ -193,22 +262,62 @@ private fun MarkdownToolbar(
 private fun EditorPane(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
+    requestInitialFocus: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val focusRequester = remember { FocusRequester() }
+
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier,
+        modifier = modifier.focusRequester(focusRequester),
         textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
+    )
+
+    if (requestInitialFocus) {
+        LaunchedEffect(Unit) {
+            focusRequester.requestFocus()
+        }
+    }
+}
+
+@Composable
+private fun WysiwygPane(
+    content: String,
+    documentKey: String = "",
+    initialScrollOffset: Int = 0,
+    onScrollChange: ((Int) -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    MarkdownPreviewPane(
+        markdown = content,
+        documentKey = documentKey,
+        initialScrollOffset = initialScrollOffset,
+        onScrollChange = onScrollChange,
+        modifier = modifier
     )
 }
 
 @Composable
 private fun MarkdownPreviewPane(
     markdown: String,
+    documentKey: String = "",
+    initialScrollOffset: Int = 0,
+    onScrollChange: ((Int) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val markwon = remember(context) {
+        Markwon.builder(context)
+            .usePlugin(StrikethroughPlugin.create())
+            .usePlugin(TablePlugin.create(context))
+            .usePlugin(TaskListPlugin.create(context))
+            .usePlugin(LinkifyPlugin.create())
+            .usePlugin(HtmlPlugin.create())
+            .build()
+    }
+
+    var hasAppliedInitialScroll by remember(documentKey) { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -217,13 +326,37 @@ private fun MarkdownPreviewPane(
     ) {
         AndroidView(
             factory = { viewContext ->
-                TextView(viewContext).apply {
-                    movementMethod = LinkMovementMethod.getInstance()
-                    setTextIsSelectable(true)
+                ScrollView(viewContext).apply {
+                    isFillViewport = true
+                    val textView = TextView(viewContext).apply {
+                        movementMethod = LinkMovementMethod.getInstance()
+                        setTextIsSelectable(true)
+                    }
+                    addView(
+                        textView,
+                        ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                        )
+                    )
+                    tag = textView
                 }
             },
-            update = { textView ->
-                textView.text = MarkwonMarkdownRenderer.render(context, markdown)
+            update = { scrollView ->
+                val textView = scrollView.tag as? TextView ?: return@AndroidView
+                markwon.setMarkdown(textView, markdown)
+
+                scrollView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
+                    onScrollChange?.invoke(scrollY)
+                }
+
+                if (!hasAppliedInitialScroll && initialScrollOffset > 0) {
+                    hasAppliedInitialScroll = true
+                    scrollView.post {
+                        val maxScroll = ((scrollView.getChildAt(0)?.height ?: 0) - scrollView.height).coerceAtLeast(0)
+                        scrollView.scrollTo(0, initialScrollOffset.coerceAtMost(maxScroll))
+                    }
+                }
             },
             modifier = Modifier.fillMaxSize()
         )
@@ -276,3 +409,6 @@ private fun TextFieldValue.prefixSelection(
         }
     )
 }
+
+// --- EditText helpers for WYSIWYG toolbar actions ---
+
