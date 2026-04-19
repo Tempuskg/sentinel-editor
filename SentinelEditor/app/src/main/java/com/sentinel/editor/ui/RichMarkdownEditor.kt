@@ -1,10 +1,31 @@
 package com.sentinel.editor.ui
 
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Typeface
+import android.text.Editable
+import android.text.InputType
+import android.text.Spanned
+import android.text.TextPaint
+import android.text.TextWatcher
 import android.text.method.LinkMovementMethod
+import android.text.style.BackgroundColorSpan
+import android.text.style.BulletSpan
+import android.text.style.ForegroundColorSpan
+import android.text.style.QuoteSpan
+import android.text.style.RelativeSizeSpan
+import android.text.style.ReplacementSpan
+import android.text.style.StyleSpan
+import android.text.style.TypefaceSpan
+import android.text.style.UnderlineSpan
+import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import android.widget.ScrollView
 import android.widget.TextView
-import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,28 +35,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import io.noties.markwon.Markwon
@@ -44,14 +57,21 @@ import io.noties.markwon.ext.tables.TablePlugin
 import io.noties.markwon.ext.tasklist.TaskListPlugin
 import io.noties.markwon.html.HtmlPlugin
 import io.noties.markwon.linkify.LinkifyPlugin
-import kotlinx.coroutines.delay
 
 private enum class MarkdownEditorMode {
-    Source,
-    WYSIWYG,
-    Preview,
-    Split
+    Wysiwyg,
+    Split,
+    Preview
 }
+
+private val headingPattern = Regex("^(#{1,6})\\s+(.+)$", RegexOption.MULTILINE)
+private val blockQuotePattern = Regex("^([ \\t]*)>\\s+(.+)$", RegexOption.MULTILINE)
+private val taskListPattern = Regex("^([ \\t]*)([-*])\\s+\\[([ xX])]\\s+(.+)$", RegexOption.MULTILINE)
+private val bulletListPattern = Regex("^([ \\t]*)([-*])\\s+(?!\\[[ xX]])(.+)$", RegexOption.MULTILINE)
+private val boldPattern = Regex("\\*\\*(.+?)\\*\\*")
+private val italicPattern = Regex("(?<!\\*)\\*(?!\\*)(.+?)(?<!\\*)\\*(?!\\*)")
+private val inlineCodePattern = Regex("(?<!`)`([^`]+)`(?!`)")
+private val linkPattern = Regex("\\[([^\\]]+)]\\(([^)]+)\\)")
 
 @Composable
 fun RichMarkdownEditor(
@@ -61,250 +81,6 @@ fun RichMarkdownEditor(
     initialScrollOffset: Int,
     onContentChange: (String) -> Unit,
     onEditorPositionChange: (Int, Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val clampedInitialCursorPosition = initialCursorPosition.coerceIn(0, content.length)
-    var editorValue by remember(documentKey) {
-        mutableStateOf(
-            TextFieldValue(
-                text = content,
-                selection = TextRange(clampedInitialCursorPosition)
-            )
-        )
-    }
-    var editorMode by remember { mutableStateOf(MarkdownEditorMode.WYSIWYG) }
-    var currentScrollOffset by remember(documentKey) { mutableStateOf(initialScrollOffset) }
-
-    fun applyEditorValue(updatedValue: TextFieldValue) {
-        editorValue = updatedValue
-        onContentChange(updatedValue.text)
-        onEditorPositionChange(updatedValue.selection.max, currentScrollOffset)
-    }
-
-    // Debounced scroll-position reporting to ViewModel
-    LaunchedEffect(currentScrollOffset) {
-        delay(500)
-        onEditorPositionChange(editorValue.selection.max, currentScrollOffset)
-    }
-
-    LaunchedEffect(documentKey, content, clampedInitialCursorPosition) {
-        if (content != editorValue.text) {
-            editorValue = TextFieldValue(
-                text = content,
-                selection = TextRange(clampedInitialCursorPosition)
-            )
-        }
-    }
-
-    Column(modifier = modifier.fillMaxSize()) {
-        EditorModeSelector(
-            editorMode = editorMode,
-            onModeChange = { newMode -> editorMode = newMode }
-        )
-
-        // Show the markdown command toolbar only when the user is editing source.
-        if (editorMode == MarkdownEditorMode.Source || editorMode == MarkdownEditorMode.Split) {
-            MarkdownToolbar(
-                onBold = {
-                    applyEditorValue(editorValue.wrapSelection("**", "**", "bold"))
-                },
-                onItalic = {
-                    applyEditorValue(editorValue.wrapSelection("*", "*", "italic"))
-                },
-                onHeading = {
-                    applyEditorValue(editorValue.prefixSelection("# ", "Heading"))
-                },
-                onCode = {
-                    applyEditorValue(editorValue.wrapSelection("`", "`", "code"))
-                },
-                onList = {
-                    applyEditorValue(editorValue.prefixSelection("- ", "List item"))
-                },
-                onQuote = {
-                    applyEditorValue(editorValue.prefixSelection("> ", "Quote"))
-                },
-                onLink = {
-                    applyEditorValue(editorValue.wrapSelection("[", "](https://)", "label"))
-                }
-            )
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(top = 12.dp, bottom = 12.dp))
-
-        when (editorMode) {
-            MarkdownEditorMode.Source -> {
-                EditorPane(
-                    value = editorValue,
-                    onValueChange = ::applyEditorValue,
-                    requestInitialFocus = clampedInitialCursorPosition > 0,
-                    modifier = Modifier.weight(1f).fillMaxWidth()
-                )
-            }
-
-            MarkdownEditorMode.WYSIWYG -> {
-                WysiwygPane(
-                    content = editorValue.text,
-                    documentKey = documentKey,
-                    initialScrollOffset = initialScrollOffset,
-                    onScrollChange = { scrollY ->
-                        currentScrollOffset = scrollY
-                    },
-                    modifier = Modifier.weight(1f).fillMaxWidth()
-                )
-            }
-
-            MarkdownEditorMode.Preview -> {
-                MarkdownPreviewPane(
-                    markdown = editorValue.text,
-                    documentKey = documentKey,
-                    initialScrollOffset = initialScrollOffset,
-                    onScrollChange = { scrollY ->
-                        currentScrollOffset = scrollY
-                    },
-                    modifier = Modifier.weight(1f).fillMaxWidth()
-                )
-            }
-
-            MarkdownEditorMode.Split -> {
-                Row(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Surface(
-                        modifier = Modifier.weight(1f),
-                        tonalElevation = 1.dp,
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        EditorPane(
-                            value = editorValue,
-                            onValueChange = ::applyEditorValue,
-                            requestInitialFocus = clampedInitialCursorPosition > 0,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    Surface(
-                        modifier = Modifier.weight(1f),
-                        tonalElevation = 1.dp,
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        MarkdownPreviewPane(
-                            markdown = editorValue.text,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun EditorModeSelector(
-    editorMode: MarkdownEditorMode,
-    onModeChange: (MarkdownEditorMode) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        FilterChip(
-            selected = editorMode == MarkdownEditorMode.Source,
-            onClick = { onModeChange(MarkdownEditorMode.Source) },
-            label = { Text("Source") }
-        )
-        FilterChip(
-            selected = editorMode == MarkdownEditorMode.WYSIWYG,
-            onClick = { onModeChange(MarkdownEditorMode.WYSIWYG) },
-            label = { Text("WYSIWYG") }
-        )
-        FilterChip(
-            selected = editorMode == MarkdownEditorMode.Preview,
-            onClick = { onModeChange(MarkdownEditorMode.Preview) },
-            label = { Text("Preview") }
-        )
-        FilterChip(
-            selected = editorMode == MarkdownEditorMode.Split,
-            onClick = { onModeChange(MarkdownEditorMode.Split) },
-            label = { Text("Split") }
-        )
-    }
-}
-
-@Composable
-private fun MarkdownToolbar(
-    onBold: () -> Unit,
-    onItalic: () -> Unit,
-    onHeading: () -> Unit,
-    onCode: () -> Unit,
-    onList: () -> Unit,
-    onQuote: () -> Unit,
-    onLink: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        AssistChip(onClick = onBold, label = { Text("Bold") })
-        AssistChip(onClick = onItalic, label = { Text("Italic") })
-        AssistChip(onClick = onHeading, label = { Text("H1") })
-        AssistChip(onClick = onCode, label = { Text("Code") })
-        AssistChip(onClick = onList, label = { Text("List") })
-        AssistChip(onClick = onQuote, label = { Text("Quote") })
-        AssistChip(onClick = onLink, label = { Text("Link") })
-    }
-}
-
-@Composable
-private fun EditorPane(
-    value: TextFieldValue,
-    onValueChange: (TextFieldValue) -> Unit,
-    requestInitialFocus: Boolean = false,
-    modifier: Modifier = Modifier
-) {
-    val focusRequester = remember { FocusRequester() }
-
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier.focusRequester(focusRequester),
-        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
-    )
-
-    if (requestInitialFocus) {
-        LaunchedEffect(Unit) {
-            focusRequester.requestFocus()
-        }
-    }
-}
-
-@Composable
-private fun WysiwygPane(
-    content: String,
-    documentKey: String = "",
-    initialScrollOffset: Int = 0,
-    onScrollChange: ((Int) -> Unit)? = null,
-    modifier: Modifier = Modifier
-) {
-    MarkdownPreviewPane(
-        markdown = content,
-        documentKey = documentKey,
-        initialScrollOffset = initialScrollOffset,
-        onScrollChange = onScrollChange,
-        modifier = modifier
-    )
-}
-
-@Composable
-private fun MarkdownPreviewPane(
-    markdown: String,
-    documentKey: String = "",
-    initialScrollOffset: Int = 0,
-    onScrollChange: ((Int) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -317,100 +93,649 @@ private fun MarkdownPreviewPane(
             .usePlugin(HtmlPlugin.create())
             .build()
     }
+    var currentEditText by remember(documentKey) { mutableStateOf<EditText?>(null) }
+    var editorMode by remember(documentKey) { mutableStateOf(MarkdownEditorMode.Wysiwyg) }
 
-    var hasAppliedInitialScroll by remember(documentKey) { mutableStateOf(false) }
+    Column(modifier = modifier.fillMaxSize()) {
+        EditorModeSelector(
+            editorMode = editorMode,
+            onModeSelected = { editorMode = it }
+        )
 
-    Box(
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.surfaceContainerLowest)
-            .padding(16.dp)
-            .clipToBounds()
-    ) {
-        AndroidView(
-            factory = { viewContext ->
-                ScrollView(viewContext).apply {
-                    isFillViewport = true
-                    val textView = TextView(viewContext).apply {
-                        movementMethod = LinkMovementMethod.getInstance()
-                        setTextIsSelectable(true)
-                    }
-                    addView(
-                        textView,
-                        ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
+        if (editorMode != MarkdownEditorMode.Preview) {
+            MarkdownToolbar(
+                onFormat = { prefix, suffix, placeholder ->
+                    currentEditText?.applyWrappedFormat(prefix, suffix, placeholder)
+                },
+                onPrefix = { prefix, placeholder ->
+                    currentEditText?.applyLinePrefix(prefix, placeholder)
+                }
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp))
+
+        when (editorMode) {
+            MarkdownEditorMode.Wysiwyg -> {
+                WysiwygEditorPane(
+                    documentKey = documentKey,
+                    content = content,
+                    initialCursorPosition = initialCursorPosition,
+                    initialScrollOffset = initialScrollOffset,
+                    onContentChange = onContentChange,
+                    onEditorPositionChange = onEditorPositionChange,
+                    onEditTextReady = { currentEditText = it },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                )
+            }
+
+            MarkdownEditorMode.Split -> {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize(),
+                        tonalElevation = 1.dp,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        WysiwygEditorPane(
+                            documentKey = documentKey,
+                            content = content,
+                            initialCursorPosition = initialCursorPosition,
+                            initialScrollOffset = initialScrollOffset,
+                            onContentChange = onContentChange,
+                            onEditorPositionChange = onEditorPositionChange,
+                            onEditTextReady = { currentEditText = it },
+                            modifier = Modifier.fillMaxSize()
                         )
-                    )
-                    tag = textView
-                }
-            },
-            update = { scrollView ->
-                val textView = scrollView.tag as? TextView ?: return@AndroidView
-                markwon.setMarkdown(textView, markdown)
+                    }
 
-                scrollView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
-                    onScrollChange?.invoke(scrollY)
-                }
-
-                if (!hasAppliedInitialScroll && initialScrollOffset > 0) {
-                    hasAppliedInitialScroll = true
-                    scrollView.post {
-                        val maxScroll = ((scrollView.getChildAt(0)?.height ?: 0) - scrollView.height).coerceAtLeast(0)
-                        scrollView.scrollTo(0, initialScrollOffset.coerceAtMost(maxScroll))
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize()
+                            .clipToBounds(),
+                        tonalElevation = 1.dp,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        MarkdownPreviewPane(
+                            markdown = content,
+                            initialScrollOffset = initialScrollOffset,
+                            lastKnownCursorPosition = initialCursorPosition,
+                            markwon = markwon,
+                            onEditorPositionChange = onEditorPositionChange,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
-            },
-            modifier = Modifier.fillMaxSize()
+            }
+
+            MarkdownEditorMode.Preview -> {
+                MarkdownPreviewPane(
+                    markdown = content,
+                    initialScrollOffset = initialScrollOffset,
+                    lastKnownCursorPosition = initialCursorPosition,
+                    markwon = markwon,
+                    onEditorPositionChange = onEditorPositionChange,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .clipToBounds()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EditorModeSelector(
+    editorMode: MarkdownEditorMode,
+    onModeSelected: (MarkdownEditorMode) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        FilterChip(
+            selected = editorMode == MarkdownEditorMode.Wysiwyg,
+            onClick = { onModeSelected(MarkdownEditorMode.Wysiwyg) },
+            label = { Text("WYSIWYG") }
+        )
+        FilterChip(
+            selected = editorMode == MarkdownEditorMode.Split,
+            onClick = { onModeSelected(MarkdownEditorMode.Split) },
+            label = { Text("Split") }
+        )
+        FilterChip(
+            selected = editorMode == MarkdownEditorMode.Preview,
+            onClick = { onModeSelected(MarkdownEditorMode.Preview) },
+            label = { Text("Preview") }
         )
     }
 }
 
-private fun TextFieldValue.wrapSelection(
+@Composable
+private fun MarkdownToolbar(
+    onFormat: (String, String, String) -> Unit,
+    onPrefix: (String, String) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        AssistChip(onClick = { onFormat("**", "**", "bold") }, label = { Text("Bold") })
+        AssistChip(onClick = { onFormat("*", "*", "italic") }, label = { Text("Italic") })
+        AssistChip(onClick = { onPrefix("# ", "Heading") }, label = { Text("H1") })
+        AssistChip(onClick = { onFormat("`", "`", "code") }, label = { Text("Code") })
+        AssistChip(onClick = { onPrefix("- ", "List item") }, label = { Text("List") })
+        AssistChip(onClick = { onPrefix("> ", "Quote") }, label = { Text("Quote") })
+        AssistChip(onClick = { onFormat("[", "](https://)", "label") }, label = { Text("Link") })
+    }
+}
+
+@Composable
+private fun WysiwygEditorPane(
+    documentKey: String,
+    content: String,
+    initialCursorPosition: Int,
+    initialScrollOffset: Int,
+    onContentChange: (String) -> Unit,
+    onEditorPositionChange: (Int, Int) -> Unit,
+    onEditTextReady: (EditText) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val inProgrammaticUpdate = remember(documentKey) { mutableStateOf(false) }
+
+    AndroidView(
+        factory = { viewContext ->
+            val inputMethodManager = viewContext.getSystemService(InputMethodManager::class.java)
+
+            object : EditText(viewContext) {
+                override fun onSelectionChanged(selStart: Int, selEnd: Int) {
+                    super.onSelectionChanged(selStart, selEnd)
+                    if (!inProgrammaticUpdate.value) {
+                        onEditorPositionChange(selStart.coerceAtLeast(0), scrollY.coerceAtLeast(0))
+                    }
+                }
+
+                override fun onScrollChanged(horizontal: Int, vertical: Int, oldHorizontal: Int, oldVertical: Int) {
+                    super.onScrollChanged(horizontal, vertical, oldHorizontal, oldVertical)
+                    if (!inProgrammaticUpdate.value) {
+                        onEditorPositionChange(selectionStart.coerceAtLeast(0), vertical.coerceAtLeast(0))
+                    }
+                }
+            }.apply {
+                setBackgroundColor(Color.TRANSPARENT)
+                gravity = Gravity.TOP or Gravity.START
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                setPadding(24, 24, 24, 24)
+                inputType = InputType.TYPE_CLASS_TEXT or
+                    InputType.TYPE_TEXT_FLAG_MULTI_LINE or
+                    InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
+                    InputType.TYPE_TEXT_FLAG_AUTO_CORRECT
+                imeOptions = EditorInfo.IME_FLAG_NO_ENTER_ACTION
+                setHorizontallyScrolling(false)
+                isFocusable = true
+                isFocusableInTouchMode = true
+                isClickable = true
+                isLongClickable = true
+                isCursorVisible = true
+                showSoftInputOnFocus = true
+                overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+
+                val markdownWatcher = InlineMarkdownStylingWatcher(
+                    editText = this,
+                    onMarkdownChanged = onContentChange
+                )
+                addTextChangedListener(markdownWatcher)
+                addTextChangedListener(object : TextWatcher {
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+
+                    override fun afterTextChanged(s: Editable?) {
+                        if (inProgrammaticUpdate.value) return
+                        markdownWatcher.renderNow()
+                    }
+                })
+
+                setOnFocusChangeListener { focusedView, hasFocus ->
+                    if (hasFocus) {
+                        inputMethodManager?.showSoftInput(focusedView, InputMethodManager.SHOW_IMPLICIT)
+                    }
+                }
+
+                inProgrammaticUpdate.value = true
+                setText(content)
+                val maxPosition = length()
+                setSelection(initialCursorPosition.coerceIn(0, maxPosition))
+                inProgrammaticUpdate.value = false
+                markdownWatcher.renderNow()
+
+                post {
+                    scrollTo(0, initialScrollOffset.coerceAtLeast(0))
+                    requestFocus()
+                }
+            }.also(onEditTextReady)
+        },
+        update = { editText ->
+            onEditTextReady(editText)
+            if (!inProgrammaticUpdate.value && content != editText.text.toString()) {
+                inProgrammaticUpdate.value = true
+                val selectionStart = editText.selectionStart.coerceAtLeast(0)
+                val selectionEnd = editText.selectionEnd.coerceAtLeast(0)
+                editText.setText(content)
+                val maxPosition = editText.length()
+                editText.setSelection(
+                    selectionStart.coerceIn(0, maxPosition),
+                    selectionEnd.coerceIn(0, maxPosition)
+                )
+                inProgrammaticUpdate.value = false
+                InlineMarkdownStylingWatcher.render(editText.editableText)
+            }
+        },
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun MarkdownPreviewPane(
+    markdown: String,
+    initialScrollOffset: Int,
+    lastKnownCursorPosition: Int,
+    markwon: Markwon,
+    onEditorPositionChange: (Int, Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AndroidView(
+        factory = { viewContext ->
+            val textView = TextView(viewContext).apply {
+                setTextColor(currentTextColor)
+                setPadding(24, 24, 24, 24)
+                movementMethod = LinkMovementMethod.getInstance()
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            object : ScrollView(viewContext) {
+                override fun onScrollChanged(horizontal: Int, vertical: Int, oldHorizontal: Int, oldVertical: Int) {
+                    super.onScrollChanged(horizontal, vertical, oldHorizontal, oldVertical)
+                    onEditorPositionChange(lastKnownCursorPosition, vertical.coerceAtLeast(0))
+                }
+            }.apply {
+                clipToPadding = true
+                addView(textView)
+                post {
+                    scrollTo(0, initialScrollOffset.coerceAtLeast(0))
+                }
+                tag = textView
+            }
+        },
+        update = { scrollView ->
+            val textView = scrollView.tag as? TextView ?: return@AndroidView
+            textView.text = markwon.toMarkdown(markdown)
+            scrollView.post {
+                scrollView.scrollTo(0, initialScrollOffset.coerceAtLeast(0))
+            }
+        },
+        modifier = modifier
+    )
+}
+
+private fun EditText.applyWrappedFormat(
     prefix: String,
     suffix: String,
     placeholder: String
-): TextFieldValue {
-    val start = selection.min
-    val end = selection.max
-    val chosenText = text.substring(start, end).ifEmpty { placeholder }
-    val replacement = prefix + chosenText + suffix
-    val updatedText = text.replaceRange(start, end, replacement)
+) {
+    val selectionStart = this.selectionStart.coerceAtLeast(0)
+    val selectionEnd = this.selectionEnd.coerceAtLeast(selectionStart)
+    val selectedText = text.substring(selectionStart, selectionEnd)
+    val insertedText = selectedText.ifEmpty { placeholder }
+    val replacement = prefix + insertedText + suffix
 
-    return copy(
-        text = updatedText,
-        selection = if (start == end) {
-            TextRange(start + prefix.length, start + prefix.length + chosenText.length)
-        } else {
-            TextRange(start + replacement.length)
-        }
-    )
+    text.replace(selectionStart, selectionEnd, replacement)
+
+    val cursor = if (selectedText.isEmpty()) {
+        selectionStart + prefix.length + insertedText.length
+    } else {
+        selectionStart + replacement.length
+    }
+    setSelection(cursor.coerceIn(0, length()))
 }
 
-private fun TextFieldValue.prefixSelection(
+private fun EditText.applyLinePrefix(
     prefix: String,
     placeholder: String
-): TextFieldValue {
-    val start = selection.min
-    val end = selection.max
-    val chosenText = text.substring(start, end)
-    val replacement = if (chosenText.isEmpty()) {
+) {
+    val selectionStart = this.selectionStart.coerceAtLeast(0)
+    val selectionEnd = this.selectionEnd.coerceAtLeast(selectionStart)
+    val selectedText = text.substring(selectionStart, selectionEnd)
+
+    val replacement = if (selectedText.isEmpty()) {
         prefix + placeholder
     } else {
-        chosenText
+        selectedText
             .split('\n')
-            .joinToString("\n") { line -> if (line.isBlank()) line else prefix + line }
+            .joinToString("\n") { line ->
+                if (line.isBlank()) line else prefix + line
+            }
     }
-    val updatedText = text.replaceRange(start, end, replacement)
 
-    return copy(
-        text = updatedText,
-        selection = if (chosenText.isEmpty()) {
-            TextRange(start + prefix.length, start + prefix.length + placeholder.length)
-        } else {
-            TextRange(start + replacement.length)
-        }
-    )
+    text.replace(selectionStart, selectionEnd, replacement)
+
+    val cursor = if (selectedText.isEmpty()) {
+        selectionStart + prefix.length + placeholder.length
+    } else {
+        selectionStart + replacement.length
+    }
+    setSelection(cursor.coerceIn(0, length()))
 }
 
-// --- EditText helpers for WYSIWYG toolbar actions ---
+private class InlineMarkdownStylingWatcher(
+    private val editText: EditText,
+    private val onMarkdownChanged: (String) -> Unit
+) : TextWatcher {
+    private var isRendering = false
+
+    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+
+    override fun afterTextChanged(s: Editable?) {
+        if (isRendering) return
+        val editable = s ?: return
+        isRendering = true
+        render(editable)
+        onMarkdownChanged(editable.toString())
+        isRendering = false
+    }
+
+    fun renderNow() {
+        val editable = editText.editableText ?: return
+        if (isRendering) return
+        isRendering = true
+        render(editable)
+        isRendering = false
+    }
+
+    companion object {
+        fun render(editable: Editable) {
+            clearInlineMarkdownSpans(editable)
+            applyHeadingSpans(editable)
+            applyBlockQuoteSpans(editable)
+            applyTaskListSpans(editable)
+            applyListSpans(editable)
+            applyInlineCodeSpans(editable)
+            applyLinkSpans(editable)
+            applyBoldSpans(editable)
+            applyItalicSpans(editable)
+        }
+    }
+}
+
+private fun clearInlineMarkdownSpans(editable: Editable) {
+    editable.getSpans(0, editable.length, HiddenSyntaxSpan::class.java).forEach(editable::removeSpan)
+    editable.getSpans(0, editable.length, StyleSpan::class.java).forEach(editable::removeSpan)
+    editable.getSpans(0, editable.length, RelativeSizeSpan::class.java).forEach(editable::removeSpan)
+    editable.getSpans(0, editable.length, ForegroundColorSpan::class.java).forEach(editable::removeSpan)
+    editable.getSpans(0, editable.length, BackgroundColorSpan::class.java).forEach(editable::removeSpan)
+    editable.getSpans(0, editable.length, UnderlineSpan::class.java).forEach(editable::removeSpan)
+    editable.getSpans(0, editable.length, BulletSpan::class.java).forEach(editable::removeSpan)
+    editable.getSpans(0, editable.length, QuoteSpan::class.java).forEach(editable::removeSpan)
+    editable.getSpans(0, editable.length, TypefaceSpan::class.java).forEach(editable::removeSpan)
+    editable.getSpans(0, editable.length, TaskMarkerSpan::class.java).forEach(editable::removeSpan)
+}
+
+private fun applyHeadingSpans(editable: Editable) {
+    headingPattern.findAll(editable).forEach { match ->
+        val markerRange = match.groups[1] ?: return@forEach
+        val contentRange = match.groups[2] ?: return@forEach
+        editable.setSpan(HiddenSyntaxSpan(), markerRange.range.first, markerRange.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        val markerEnd = markerRange.range.last + 1
+        if (markerEnd < contentRange.range.first) {
+            editable.setSpan(HiddenSyntaxSpan(), markerEnd, contentRange.range.first, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        editable.setSpan(StyleSpan(Typeface.BOLD), contentRange.range.first, contentRange.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        editable.setSpan(
+            RelativeSizeSpan(headingScaleForLevel(markerRange.value.length)),
+            contentRange.range.first,
+            contentRange.range.last + 1,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+    }
+}
+
+private fun applyBlockQuoteSpans(editable: Editable) {
+    blockQuotePattern.findAll(editable).forEach { match ->
+        val indentRange = match.groups[1] ?: return@forEach
+        val contentRange = match.groups[2] ?: return@forEach
+        editable.setSpan(
+            HiddenSyntaxSpan(),
+            indentRange.range.first,
+            contentRange.range.first,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+        editable.setSpan(
+            QuoteSpan(Color.parseColor("#90A4AE"), 6, 24),
+            contentRange.range.first,
+            lineEndFor(editable, contentRange.range.first),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+        editable.setSpan(
+            ForegroundColorSpan(Color.parseColor("#546E7A")),
+            contentRange.range.first,
+            lineEndFor(editable, contentRange.range.first),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+    }
+}
+
+private fun applyTaskListSpans(editable: Editable) {
+    taskListPattern.findAll(editable).forEach { match ->
+        val indentRange = match.groups[1] ?: return@forEach
+        val checkState = match.groups[3]?.value.orEmpty()
+        val contentRange = match.groups[4] ?: return@forEach
+        editable.setSpan(
+            HiddenSyntaxSpan(),
+            indentRange.range.first,
+            indentRange.range.last + 1,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+        editable.setSpan(
+            TaskMarkerSpan(isChecked = checkState.equals("x", ignoreCase = true)),
+            indentRange.range.last + 1,
+            contentRange.range.first,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+        editable.setSpan(
+            ForegroundColorSpan(Color.parseColor("#37474F")),
+            contentRange.range.first,
+            lineEndFor(editable, contentRange.range.first),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+    }
+}
+
+private fun applyListSpans(editable: Editable) {
+    bulletListPattern.findAll(editable).forEach { match ->
+        val indentRange = match.groups[1] ?: return@forEach
+        val contentRange = match.groups[3] ?: return@forEach
+        val hideEnd = contentRange.range.first
+        editable.setSpan(HiddenSyntaxSpan(), indentRange.range.first, hideEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        editable.setSpan(
+            BulletSpan(24),
+            contentRange.range.first,
+            lineEndFor(editable, contentRange.range.first),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+    }
+}
+
+private fun applyInlineCodeSpans(editable: Editable) {
+    inlineCodePattern.findAll(editable).forEach { match ->
+        val contentRange = match.groups[1] ?: return@forEach
+        hideDelimitedRange(
+            editable,
+            match.range.first,
+            contentRange.range.first,
+            contentRange.range.last + 1,
+            match.range.last + 1
+        )
+        editable.setSpan(
+            TypefaceSpan("monospace"),
+            contentRange.range.first,
+            contentRange.range.last + 1,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+        editable.setSpan(
+            BackgroundColorSpan(Color.parseColor("#ECEFF1")),
+            contentRange.range.first,
+            contentRange.range.last + 1,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+        editable.setSpan(
+            ForegroundColorSpan(Color.parseColor("#263238")),
+            contentRange.range.first,
+            contentRange.range.last + 1,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+    }
+}
+
+private fun applyBoldSpans(editable: Editable) {
+    boldPattern.findAll(editable).forEach { match ->
+        val contentRange = match.groups[1] ?: return@forEach
+        hideDelimitedRange(editable, match.range.first, contentRange.range.first, contentRange.range.last + 1, match.range.last + 1)
+        editable.setSpan(StyleSpan(Typeface.BOLD), contentRange.range.first, contentRange.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    }
+}
+
+private fun applyItalicSpans(editable: Editable) {
+    italicPattern.findAll(editable).forEach { match ->
+        val contentRange = match.groups[1] ?: return@forEach
+        hideDelimitedRange(editable, match.range.first, contentRange.range.first, contentRange.range.last + 1, match.range.last + 1)
+        editable.setSpan(StyleSpan(Typeface.ITALIC), contentRange.range.first, contentRange.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    }
+}
+
+private fun applyLinkSpans(editable: Editable) {
+    linkPattern.findAll(editable).forEach { match ->
+        val labelRange = match.groups[1] ?: return@forEach
+        val urlRange = match.groups[2] ?: return@forEach
+        editable.setSpan(HiddenSyntaxSpan(), match.range.first, labelRange.range.first, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        editable.setSpan(HiddenSyntaxSpan(), labelRange.range.last + 1, urlRange.range.last + 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        editable.setSpan(ForegroundColorSpan(Color.parseColor("#1565C0")), labelRange.range.first, labelRange.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        editable.setSpan(UnderlineSpan(), labelRange.range.first, labelRange.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    }
+}
+
+private fun hideDelimitedRange(
+    editable: Editable,
+    fullStart: Int,
+    contentStart: Int,
+    contentEndExclusive: Int,
+    fullEndExclusive: Int
+) {
+    if (fullStart < contentStart) {
+        editable.setSpan(HiddenSyntaxSpan(), fullStart, contentStart, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    }
+    if (contentEndExclusive < fullEndExclusive) {
+        editable.setSpan(HiddenSyntaxSpan(), contentEndExclusive, fullEndExclusive, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    }
+}
+
+private fun lineEndFor(editable: Editable, start: Int): Int {
+    val nextBreak = editable.indexOf('\n', start)
+    return if (nextBreak == -1) editable.length else nextBreak
+}
+
+private fun CharSequence.indexOf(character: Char, startIndex: Int): Int {
+    for (index in startIndex until length) {
+        if (this[index] == character) return index
+    }
+    return -1
+}
+
+private fun headingScaleForLevel(level: Int): Float = when (level) {
+    1 -> 1.6f
+    2 -> 1.4f
+    3 -> 1.25f
+    4 -> 1.15f
+    5 -> 1.05f
+    else -> 1f
+}
+
+private class HiddenSyntaxSpan : ReplacementSpan() {
+    override fun getSize(
+        paint: Paint,
+        text: CharSequence,
+        start: Int,
+        end: Int,
+        fm: Paint.FontMetricsInt?
+    ): Int = 0
+
+    override fun draw(
+        canvas: android.graphics.Canvas,
+        text: CharSequence,
+        start: Int,
+        end: Int,
+        x: Float,
+        top: Int,
+        y: Int,
+        bottom: Int,
+        paint: Paint
+    ) = Unit
+}
+
+private class TaskMarkerSpan(
+    private val isChecked: Boolean
+) : ReplacementSpan() {
+    private val markerText = if (isChecked) "☑ " else "☐ "
+
+    override fun getSize(
+        paint: Paint,
+        text: CharSequence,
+        start: Int,
+        end: Int,
+        fm: Paint.FontMetricsInt?
+    ): Int = paint.measureText(markerText).toInt()
+
+    override fun draw(
+        canvas: android.graphics.Canvas,
+        text: CharSequence,
+        start: Int,
+        end: Int,
+        x: Float,
+        top: Int,
+        y: Int,
+        bottom: Int,
+        paint: Paint
+    ) {
+        val previousColor = paint.color
+        paint.color = Color.parseColor("#37474F")
+        canvas.drawText(markerText, x, y.toFloat(), paint)
+        paint.color = previousColor
+    }
+}
 
