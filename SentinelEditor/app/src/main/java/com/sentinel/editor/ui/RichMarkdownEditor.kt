@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
@@ -136,7 +137,7 @@ fun RichMarkdownEditor(
                     value = editorValue,
                     onValueChange = ::applyEditorValue,
                     requestInitialFocus = clampedInitialCursorPosition > 0,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.weight(1f).fillMaxWidth()
                 )
             }
 
@@ -148,7 +149,7 @@ fun RichMarkdownEditor(
                     onScrollChange = { scrollY ->
                         currentScrollOffset = scrollY
                     },
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.weight(1f).fillMaxWidth()
                 )
             }
 
@@ -160,13 +161,13 @@ fun RichMarkdownEditor(
                     onScrollChange = { scrollY ->
                         currentScrollOffset = scrollY
                     },
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.weight(1f).fillMaxWidth()
                 )
             }
 
             MarkdownEditorMode.Split -> {
                 Row(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Surface(
@@ -323,6 +324,7 @@ private fun MarkdownPreviewPane(
         modifier = modifier
             .background(MaterialTheme.colorScheme.surfaceContainerLowest)
             .padding(16.dp)
+            .clipToBounds()
     ) {
         AndroidView(
             factory = { viewContext ->
