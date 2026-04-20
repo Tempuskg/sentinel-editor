@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sentinel.editor.utils.ThemeMode
 import com.sentinel.service.ContentResponse
 import com.sentinel.service.RepositoryResponse
 
@@ -335,7 +337,8 @@ fun EditorLayout(
     onContentChange: (String) -> Unit = {},
     onEditorPositionChange: (Int, Int) -> Unit = { _, _ -> },
     onSave: (String) -> Unit = {},
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onOpenSettings: () -> Unit = {}
 ) {
     var showSaveDialog by remember { mutableStateOf(false) }
     var commitMessage by remember(fileName) {
@@ -411,6 +414,12 @@ fun EditorLayout(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = "Settings"
+                        )
+                    }
                     if (content != null) {
                         IconButton(
                             onClick = { showSaveDialog = true },
@@ -511,4 +520,57 @@ private fun MarkdownEditorContent(
         onEditorPositionChange = onEditorPositionChange,
         modifier = modifier
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
+    onBack: () -> Unit = {}
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Settings") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            Text(
+                text = "Appearance",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            )
+
+            ThemeMode.entries.forEach { option ->
+                ListItem(
+                    headlineContent = { Text(option.title) },
+                    supportingContent = { Text(option.description) },
+                    leadingContent = {
+                        RadioButton(
+                            selected = option == themeMode,
+                            onClick = null
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onThemeModeChange(option) }
+                )
+                HorizontalDivider()
+            }
+        }
+    }
 }

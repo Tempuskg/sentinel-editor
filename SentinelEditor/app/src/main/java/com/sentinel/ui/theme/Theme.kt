@@ -16,7 +16,10 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -76,6 +79,42 @@ private val LightColorScheme = lightColorScheme(
     onErrorContainer = Color(0xFF831C14)
 )
 
+@Immutable
+data class EditorColors(
+    val textColor: Color,
+    val linkColor: Color,
+    val quoteBorderColor: Color,
+    val quoteTextColor: Color,
+    val taskMarkerColor: Color,
+    val inlineCodeBackgroundColor: Color,
+    val inlineCodeTextColor: Color,
+    val cursorLineColor: Color
+)
+
+private val DarkEditorColors = EditorColors(
+    textColor = Color.White,
+    linkColor = EditorLinkDark,
+    quoteBorderColor = EditorQuoteBorderDark,
+    quoteTextColor = EditorQuoteTextDark,
+    taskMarkerColor = EditorTaskMarkerDark,
+    inlineCodeBackgroundColor = EditorCodeBackgroundDark,
+    inlineCodeTextColor = EditorCodeTextDark,
+    cursorLineColor = EditorCursorLineDark
+)
+
+private val LightEditorColors = EditorColors(
+    textColor = Color(0xFF1F2933),
+    linkColor = EditorLinkLight,
+    quoteBorderColor = EditorQuoteBorderLight,
+    quoteTextColor = EditorQuoteTextLight,
+    taskMarkerColor = EditorTaskMarkerLight,
+    inlineCodeBackgroundColor = EditorCodeBackgroundLight,
+    inlineCodeTextColor = EditorCodeTextLight,
+    cursorLineColor = EditorCursorLineLight
+)
+
+val LocalEditorColors = staticCompositionLocalOf { LightEditorColors }
+
 @Composable
 fun SentinelEditorTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -94,19 +133,22 @@ fun SentinelEditorTheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
+    val editorColors = if (darkTheme) DarkEditorColors else LightEditorColors
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+            window.statusBarColor = colorScheme.surface.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        content = content
-    )
+    CompositionLocalProvider(LocalEditorColors provides editorColors) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            content = content
+        )
+    }
 }
 
 @Composable
@@ -114,8 +156,8 @@ fun AppTheme(
     darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    // Use default Material3 theme with custom color scheme if needed
-    MaterialTheme(
+    SentinelEditorTheme(
+        darkTheme = darkTheme,
         content = content
     )
 }

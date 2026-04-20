@@ -17,10 +17,16 @@ import com.sentinel.editor.ui.DeviceAuthScreen
 import com.sentinel.editor.ui.EditorLayout
 import com.sentinel.editor.ui.FileExplorerScreen
 import com.sentinel.editor.ui.RepositoryListScreen
+import com.sentinel.editor.ui.SettingsScreen
 import com.sentinel.editor.ui.TokenEntryScreen
+import com.sentinel.editor.utils.ThemeMode
 
 @Composable
-fun NavigationGraph(navController: NavHostController) {
+fun NavigationGraph(
+    navController: NavHostController,
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit
+) {
     val viewModel: MainViewModel = viewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -149,6 +155,15 @@ fun NavigationGraph(navController: NavHostController) {
                 onContentChange = viewModel::updateSelectedFileContent,
                 onEditorPositionChange = viewModel::updateSelectedFilePosition,
                 onSave = viewModel::saveSelectedFile,
+                onBack = { navController.popBackStack() },
+                onOpenSettings = { navController.navigate("settings") }
+            )
+        }
+
+        composable(route = "settings") {
+            SettingsScreen(
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange,
                 onBack = { navController.popBackStack() }
             )
         }

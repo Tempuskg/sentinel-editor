@@ -43,15 +43,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.sentinel.editor.ui.theme.LocalEditorColors
 import io.noties.markwon.Markwon
 import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
 import io.noties.markwon.ext.tables.TablePlugin
@@ -77,6 +80,17 @@ private val linkPattern = Regex("\\[([^\\]]+)]\\(([^)]+)\\)")
 private val editorPaneHorizontalPadding = 6.dp
 private val editorContentHorizontalPadding = 6.dp
 private val editorContentVerticalPadding = 12.dp
+
+private data class InlineEditorColors(
+    val textColor: Int,
+    val linkColor: Int,
+    val quoteBorderColor: Int,
+    val quoteTextColor: Int,
+    val taskMarkerColor: Int,
+    val inlineCodeBackgroundColor: Int,
+    val inlineCodeTextColor: Int,
+    val cursorLineColor: Int
+)
 
 @Composable
 fun RichMarkdownEditor(
@@ -359,9 +373,23 @@ private fun MarkdownEditorPane(
     modifier: Modifier = Modifier
 ) {
     val inProgrammaticUpdate = remember(documentKey) { mutableStateOf(false) }
+    val editorColors = LocalEditorColors.current
+    val inlineEditorColors = remember(editorColors) {
+        InlineEditorColors(
+            textColor = editorColors.textColor.toArgb(),
+            linkColor = editorColors.linkColor.toArgb(),
+            quoteBorderColor = editorColors.quoteBorderColor.toArgb(),
+            quoteTextColor = editorColors.quoteTextColor.toArgb(),
+            taskMarkerColor = editorColors.taskMarkerColor.toArgb(),
+            inlineCodeBackgroundColor = editorColors.inlineCodeBackgroundColor.toArgb(),
+            inlineCodeTextColor = editorColors.inlineCodeTextColor.toArgb(),
+            cursorLineColor = editorColors.cursorLineColor.toArgb()
+        )
+    }
     val contentHorizontalPaddingPx = with(LocalDensity.current) { editorContentHorizontalPadding.roundToPx() }
     val contentVerticalPaddingPx = with(LocalDensity.current) { editorContentVerticalPadding.roundToPx() }
 
+    key(documentKey, inlineEditorColors) {
     AndroidView(
         factory = { viewContext ->
             val inputMethodManager = viewContext.getSystemService(InputMethodManager::class.java)
@@ -382,6 +410,9 @@ private fun MarkdownEditorPane(
                 }
             }.apply {
                 setBackgroundColor(Color.TRANSPARENT)
+                setTextColor(inlineEditorColors.textColor)
+                setLinkTextColor(inlineEditorColors.linkColor)
+                highlightColor = inlineEditorColors.cursorLineColor
                 gravity = Gravity.TOP or Gravity.START
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -410,6 +441,7 @@ private fun MarkdownEditorPane(
                 val markdownWatcher = if (enableInlineRendering) {
                     InlineMarkdownStylingWatcher(
                         editText = this,
+                        colors = inlineEditorColors,
                         onMarkdownChanged = onContentChange
                     ).also { watcher ->
                         addTextChangedListener(watcher)
@@ -471,12 +503,16 @@ private fun MarkdownEditorPane(
                 )
                 inProgrammaticUpdate.value = false
                 if (enableInlineRendering) {
-                    InlineMarkdownStylingWatcher.render(editText.editableText)
+                    InlineMarkdownStylingWatcher.render(editText.editableText, inlineEditorColors)
                 }
             }
+            editText.setTextColor(inlineEditorColors.textColor)
+            editText.setLinkTextColor(inlineEditorColors.linkColor)
+            editText.highlightColor = inlineEditorColors.cursorLineColor
         },
         modifier = modifier
     )
+    }
 }
 
 @Composable
@@ -488,13 +524,27 @@ private fun MarkdownPreviewPane(
     onEditorPositionChange: (Int, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val editorColors = LocalEditorColors.current
+    val inlineEditorColors = remember(editorColors) {
+        InlineEditorColors(
+            textColor = editorColors.textColor.toArgb(),
+            linkColor = editorColors.linkColor.toArgb(),
+            quoteBorderColor = editorColors.quoteBorderColor.toArgb(),
+            quoteTextColor = editorColors.quoteTextColor.toArgb(),
+            taskMarkerColor = editorColors.taskMarkerColor.toArgb(),
+            inlineCodeBackgroundColor = editorColors.inlineCodeBackgroundColor.toArgb(),
+            inlineCodeTextColor = editorColors.inlineCodeTextColor.toArgb(),
+            cursorLineColor = editorColors.cursorLineColor.toArgb()
+        )
+    }
     val contentHorizontalPaddingPx = with(LocalDensity.current) { editorContentHorizontalPadding.roundToPx() }
     val contentVerticalPaddingPx = with(LocalDensity.current) { editorContentVerticalPadding.roundToPx() }
 
     AndroidView(
         factory = { viewContext ->
             val textView = TextView(viewContext).apply {
-                setTextColor(currentTextColor)
+                setTextColor(inlineEditorColors.textColor)
+                setLinkTextColor(inlineEditorColors.linkColor)
                 setPadding(
                     contentHorizontalPaddingPx,
                     contentVerticalPaddingPx,
@@ -524,6 +574,8 @@ private fun MarkdownPreviewPane(
         },
         update = { scrollView ->
             val textView = scrollView.tag as? TextView ?: return@AndroidView
+            textView.setTextColor(inlineEditorColors.textColor)
+            textView.setLinkTextColor(inlineEditorColors.linkColor)
             textView.text = markwon.toMarkdown(markdown)
             scrollView.post {
                 scrollView.scrollTo(0, initialScrollOffset.coerceAtLeast(0))
@@ -584,6 +636,7 @@ private fun EditText.applyLinePrefix(
 
 private class InlineMarkdownStylingWatcher(
     private val editText: EditText,
+    private val colors: InlineEditorColors,
     private val onMarkdownChanged: (String) -> Unit
 ) : TextWatcher {
     private var isRendering = false
@@ -596,7 +649,7 @@ private class InlineMarkdownStylingWatcher(
         if (isRendering) return
         val editable = s ?: return
         isRendering = true
-        render(editable)
+        render(editable, colors)
         onMarkdownChanged(editable.toString())
         isRendering = false
     }
@@ -605,19 +658,19 @@ private class InlineMarkdownStylingWatcher(
         val editable = editText.editableText ?: return
         if (isRendering) return
         isRendering = true
-        render(editable)
+        render(editable, colors)
         isRendering = false
     }
 
     companion object {
-        fun render(editable: Editable) {
+        fun render(editable: Editable, colors: InlineEditorColors) {
             clearInlineMarkdownSpans(editable)
             applyHeadingSpans(editable)
-            applyBlockQuoteSpans(editable)
-            applyTaskListSpans(editable)
+            applyBlockQuoteSpans(editable, colors)
+            applyTaskListSpans(editable, colors)
             applyListSpans(editable)
-            applyInlineCodeSpans(editable)
-            applyLinkSpans(editable)
+            applyInlineCodeSpans(editable, colors)
+            applyLinkSpans(editable, colors)
             applyBoldSpans(editable)
             applyItalicSpans(editable)
         }
@@ -656,7 +709,7 @@ private fun applyHeadingSpans(editable: Editable) {
     }
 }
 
-private fun applyBlockQuoteSpans(editable: Editable) {
+private fun applyBlockQuoteSpans(editable: Editable, colors: InlineEditorColors) {
     blockQuotePattern.findAll(editable).forEach { match ->
         val indentRange = match.groups[1] ?: return@forEach
         val contentRange = match.groups[2] ?: return@forEach
@@ -667,13 +720,13 @@ private fun applyBlockQuoteSpans(editable: Editable) {
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
         )
         editable.setSpan(
-            QuoteSpan(Color.parseColor("#90A4AE"), 6, 24),
+            QuoteSpan(colors.quoteBorderColor, 6, 24),
             contentRange.range.first,
             lineEndFor(editable, contentRange.range.first),
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
         )
         editable.setSpan(
-            ForegroundColorSpan(Color.parseColor("#546E7A")),
+            ForegroundColorSpan(colors.quoteTextColor),
             contentRange.range.first,
             lineEndFor(editable, contentRange.range.first),
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -681,7 +734,7 @@ private fun applyBlockQuoteSpans(editable: Editable) {
     }
 }
 
-private fun applyTaskListSpans(editable: Editable) {
+private fun applyTaskListSpans(editable: Editable, colors: InlineEditorColors) {
     taskListPattern.findAll(editable).forEach { match ->
         val indentRange = match.groups[1] ?: return@forEach
         val checkState = match.groups[3]?.value.orEmpty()
@@ -693,13 +746,16 @@ private fun applyTaskListSpans(editable: Editable) {
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
         )
         editable.setSpan(
-            TaskMarkerSpan(isChecked = checkState.equals("x", ignoreCase = true)),
+            TaskMarkerSpan(
+                isChecked = checkState.equals("x", ignoreCase = true),
+                color = colors.taskMarkerColor
+            ),
             indentRange.range.last + 1,
             contentRange.range.first,
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
         )
         editable.setSpan(
-            ForegroundColorSpan(Color.parseColor("#37474F")),
+            ForegroundColorSpan(colors.textColor),
             contentRange.range.first,
             lineEndFor(editable, contentRange.range.first),
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -722,7 +778,7 @@ private fun applyListSpans(editable: Editable) {
     }
 }
 
-private fun applyInlineCodeSpans(editable: Editable) {
+private fun applyInlineCodeSpans(editable: Editable, colors: InlineEditorColors) {
     inlineCodePattern.findAll(editable).forEach { match ->
         val contentRange = match.groups[1] ?: return@forEach
         hideDelimitedRange(
@@ -739,13 +795,13 @@ private fun applyInlineCodeSpans(editable: Editable) {
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
         )
         editable.setSpan(
-            BackgroundColorSpan(Color.parseColor("#ECEFF1")),
+            BackgroundColorSpan(colors.inlineCodeBackgroundColor),
             contentRange.range.first,
             contentRange.range.last + 1,
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
         )
         editable.setSpan(
-            ForegroundColorSpan(Color.parseColor("#263238")),
+            ForegroundColorSpan(colors.inlineCodeTextColor),
             contentRange.range.first,
             contentRange.range.last + 1,
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -769,13 +825,13 @@ private fun applyItalicSpans(editable: Editable) {
     }
 }
 
-private fun applyLinkSpans(editable: Editable) {
+private fun applyLinkSpans(editable: Editable, colors: InlineEditorColors) {
     linkPattern.findAll(editable).forEach { match ->
         val labelRange = match.groups[1] ?: return@forEach
         val urlRange = match.groups[2] ?: return@forEach
         editable.setSpan(HiddenSyntaxSpan(), match.range.first, labelRange.range.first, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         editable.setSpan(HiddenSyntaxSpan(), labelRange.range.last + 1, urlRange.range.last + 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        editable.setSpan(ForegroundColorSpan(Color.parseColor("#1565C0")), labelRange.range.first, labelRange.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        editable.setSpan(ForegroundColorSpan(colors.linkColor), labelRange.range.first, labelRange.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         editable.setSpan(UnderlineSpan(), labelRange.range.first, labelRange.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
     }
 }
@@ -839,7 +895,8 @@ private class HiddenSyntaxSpan : ReplacementSpan() {
 }
 
 private class TaskMarkerSpan(
-    private val isChecked: Boolean
+    private val isChecked: Boolean,
+    private val color: Int
 ) : ReplacementSpan() {
     private val markerText = if (isChecked) "☑ " else "☐ "
 
@@ -863,7 +920,7 @@ private class TaskMarkerSpan(
         paint: Paint
     ) {
         val previousColor = paint.color
-        paint.color = Color.parseColor("#37474F")
+        paint.color = color
         canvas.drawText(markerText, x, y.toFloat(), paint)
         paint.color = previousColor
     }
