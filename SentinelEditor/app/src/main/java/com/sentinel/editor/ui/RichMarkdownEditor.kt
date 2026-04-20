@@ -60,6 +60,7 @@ import io.noties.markwon.html.HtmlPlugin
 import io.noties.markwon.linkify.LinkifyPlugin
 
 private enum class MarkdownEditorMode {
+    Source,
     Wysiwyg,
     Split,
     Preview
@@ -120,6 +121,22 @@ fun RichMarkdownEditor(
         HorizontalDivider(modifier = Modifier.padding(bottom = 4.dp))
 
         when (editorMode) {
+            MarkdownEditorMode.Source -> {
+                SourceEditorPane(
+                    documentKey = documentKey,
+                    content = content,
+                    initialCursorPosition = initialCursorPosition,
+                    initialScrollOffset = initialScrollOffset,
+                    onContentChange = onContentChange,
+                    onEditorPositionChange = onEditorPositionChange,
+                    onEditTextReady = { currentEditText = it },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(horizontal = editorPaneHorizontalPadding)
+                )
+            }
+
             MarkdownEditorMode.Wysiwyg -> {
                 WysiwygEditorPane(
                     documentKey = documentKey,
@@ -214,6 +231,11 @@ private fun EditorModeSelector(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         FilterChip(
+            selected = editorMode == MarkdownEditorMode.Source,
+            onClick = { onModeSelected(MarkdownEditorMode.Source) },
+            label = { Text("Source") }
+        )
+        FilterChip(
             selected = editorMode == MarkdownEditorMode.Wysiwyg,
             onClick = { onModeSelected(MarkdownEditorMode.Wysiwyg) },
             label = { Text("WYSIWYG") }
@@ -254,6 +276,29 @@ private fun MarkdownToolbar(
 }
 
 @Composable
+private fun SourceEditorPane(
+    documentKey: String,
+    content: String,
+    initialCursorPosition: Int,
+    initialScrollOffset: Int,
+    onContentChange: (String) -> Unit,
+    onEditorPositionChange: (Int, Int) -> Unit,
+    onEditTextReady: (EditText) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    PlainTextMarkdownEditorPane(
+        documentKey = documentKey,
+        content = content,
+        initialCursorPosition = initialCursorPosition,
+        initialScrollOffset = initialScrollOffset,
+        onContentChange = onContentChange,
+        onEditorPositionChange = onEditorPositionChange,
+        onEditTextReady = onEditTextReady,
+        modifier = modifier
+    )
+}
+
+@Composable
 private fun WysiwygEditorPane(
     documentKey: String,
     content: String,
@@ -262,6 +307,55 @@ private fun WysiwygEditorPane(
     onContentChange: (String) -> Unit,
     onEditorPositionChange: (Int, Int) -> Unit,
     onEditTextReady: (EditText) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    MarkdownEditorPane(
+        documentKey = documentKey,
+        content = content,
+        initialCursorPosition = initialCursorPosition,
+        initialScrollOffset = initialScrollOffset,
+        onContentChange = onContentChange,
+        onEditorPositionChange = onEditorPositionChange,
+        onEditTextReady = onEditTextReady,
+        enableInlineRendering = true,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun PlainTextMarkdownEditorPane(
+    documentKey: String,
+    content: String,
+    initialCursorPosition: Int,
+    initialScrollOffset: Int,
+    onContentChange: (String) -> Unit,
+    onEditorPositionChange: (Int, Int) -> Unit,
+    onEditTextReady: (EditText) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    MarkdownEditorPane(
+        documentKey = documentKey,
+        content = content,
+        initialCursorPosition = initialCursorPosition,
+        initialScrollOffset = initialScrollOffset,
+        onContentChange = onContentChange,
+        onEditorPositionChange = onEditorPositionChange,
+        onEditTextReady = onEditTextReady,
+        enableInlineRendering = false,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun MarkdownEditorPane(
+    documentKey: String,
+    content: String,
+    initialCursorPosition: Int,
+    initialScrollOffset: Int,
+    onContentChange: (String) -> Unit,
+    onEditorPositionChange: (Int, Int) -> Unit,
+    onEditTextReady: (EditText) -> Unit,
+    enableInlineRendering: Boolean,
     modifier: Modifier = Modifier
 ) {
     val inProgrammaticUpdate = remember(documentKey) { mutableStateOf(false) }
@@ -313,21 +407,36 @@ private fun WysiwygEditorPane(
                 showSoftInputOnFocus = true
                 overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
 
-                val markdownWatcher = InlineMarkdownStylingWatcher(
-                    editText = this,
-                    onMarkdownChanged = onContentChange
-                )
-                addTextChangedListener(markdownWatcher)
-                addTextChangedListener(object : TextWatcher {
-                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                val markdownWatcher = if (enableInlineRendering) {
+                    InlineMarkdownStylingWatcher(
+                        editText = this,
+                        onMarkdownChanged = onContentChange
+                    ).also { watcher ->
+                        addTextChangedListener(watcher)
+                        addTextChangedListener(object : TextWatcher {
+                            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
-                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
 
-                    override fun afterTextChanged(s: Editable?) {
-                        if (inProgrammaticUpdate.value) return
-                        markdownWatcher.renderNow()
+                            override fun afterTextChanged(s: Editable?) {
+                                if (inProgrammaticUpdate.value) return
+                                watcher.renderNow()
+                            }
+                        })
                     }
-                })
+                } else {
+                    addTextChangedListener(object : TextWatcher {
+                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+
+                        override fun afterTextChanged(s: Editable?) {
+                            if (inProgrammaticUpdate.value) return
+                            onContentChange(s?.toString().orEmpty())
+                        }
+                    })
+                    null
+                }
 
                 setOnFocusChangeListener { focusedView, hasFocus ->
                     if (hasFocus) {
@@ -340,7 +449,7 @@ private fun WysiwygEditorPane(
                 val maxPosition = length()
                 setSelection(initialCursorPosition.coerceIn(0, maxPosition))
                 inProgrammaticUpdate.value = false
-                markdownWatcher.renderNow()
+                markdownWatcher?.renderNow()
 
                 post {
                     scrollTo(0, initialScrollOffset.coerceAtLeast(0))
@@ -361,7 +470,9 @@ private fun WysiwygEditorPane(
                     selectionEnd.coerceIn(0, maxPosition)
                 )
                 inProgrammaticUpdate.value = false
-                InlineMarkdownStylingWatcher.render(editText.editableText)
+                if (enableInlineRendering) {
+                    InlineMarkdownStylingWatcher.render(editText.editableText)
+                }
             }
         },
         modifier = modifier
